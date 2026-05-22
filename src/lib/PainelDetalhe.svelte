@@ -56,6 +56,22 @@
       </ul>
     </div>
 
+    {#if bloco.payloadEntrada}
+      <div class="secao">
+        <h4>📥 Dado que recebe</h4>
+        <p class="payload-titulo">{bloco.payloadEntrada.titulo}</p>
+        <pre class="payload-bloco" data-tipo={bloco.payloadEntrada.tipo ?? 'json'}>{bloco.payloadEntrada.conteudo}</pre>
+      </div>
+    {/if}
+
+    {#if bloco.payloadSaida}
+      <div class="secao">
+        <h4>📤 Dado que envia</h4>
+        <p class="payload-titulo">{bloco.payloadSaida.titulo}</p>
+        <pre class="payload-bloco" data-tipo={bloco.payloadSaida.tipo ?? 'json'}>{bloco.payloadSaida.conteudo}</pre>
+      </div>
+    {/if}
+
     {#if bloco.observacoes && bloco.observacoes.length > 0}
       <div class="secao">
         <h4>Observações</h4>
@@ -68,3 +84,34 @@
     {/if}
   {/if}
 </aside>
+
+<style>
+  .payload-titulo {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 4px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .payload-bloco {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+    position: relative;
+  }
+  .payload-bloco[data-tipo="http"] {
+    border-left: 3px solid var(--info);
+  }
+  .payload-bloco[data-tipo="json"] {
+    border-left: 3px solid var(--purple);
+  }
+</style>

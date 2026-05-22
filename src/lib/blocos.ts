@@ -25,6 +25,31 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Recebe HTTP do frontend, valida campanha, publica msg no Service Bus, retorna 202. HOJE também roda 2 workers dentro do mesmo processo (concorrendo CPU com requests).',
     recebeDe: ['Frontend (HTTP POST)', 'Webhook Meta (POST /webhooks/whatsapp)'],
     entrega: ['Service Bus fila `genesis-campanhas`', 'Service Bus fila `genesis-webhooks`', 'Resposta 202 pro frontend'],
+    payloadEntrada: {
+      titulo: 'HTTP do frontend (disparar campanha)',
+      tipo: 'http',
+      conteudo: `POST /api/campanhas/4f5e-...-c8a1/disparar
+Authorization: Bearer eyJhbGc...
+Content-Type: application/json
+
+(sem body — id está na URL)`,
+    },
+    payloadSaida: {
+      titulo: 'Resposta + msg enfileirada',
+      tipo: 'json',
+      conteudo: `// 1. Resposta HTTP imediata pro frontend (202)
+{
+  "status": "na_fila",
+  "campanha_id": "4f5e-...-c8a1"
+}
+
+// 2. Em paralelo, publica na fila genesis-campanhas:
+{
+  "tipo": "campanha_disparo",
+  "campanha_id": "4f5e-...-c8a1",
+  "tenant_id": "genesis"
+}`,
+    },
     observacoes: [
       'Problema: o mesmo container responde HTTP e roda workers — competem por CPU.',
       'Pra escalar, vamos isolar: backend só HTTP, workers em App Services separados.',
@@ -40,6 +65,33 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Recebe 1 msg por campanha disparada. Garante 1 msg = 1 consumer. Ack/complete explícito. Tem DLQ nativa (que hoje não usamos).',
     recebeDe: ['Backend FastAPI (enfileira ao receber POST /disparar)'],
     entrega: ['Worker de campanhas (consumer)'],
+    payloadEntrada: {
+      titulo: 'Mensagem publicada pelo backend',
+      tipo: 'json',
+      conteudo: `{
+  "tipo": "campanha_disparo",
+  "campanha_id": "4f5e8a2c-7b91-...-c8a1",
+  "tenant_id": "genesis"
+}
+
+// Headers do SB
+MessageId: <auto-gerado pelo SB>
+EnqueuedTimeUtc: 2026-05-21T20:14:32Z
+DeliveryCount: 1`,
+    },
+    payloadSaida: {
+      titulo: 'O mesmo payload chega no worker',
+      tipo: 'json',
+      conteudo: `// Worker faz json.loads(str(msg)) e recebe:
+{
+  "tipo": "campanha_disparo",
+  "campanha_id": "4f5e8a2c-7b91-...-c8a1",
+  "tenant_id": "genesis"
+}
+
+// Depois worker chama:
+// → await receiver.complete_message(msg)  (ack)`,
+    },
   },
   {
     id: 'sb-webhooks-hoje',
@@ -51,6 +103,43 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Recebe msg quando alguém manda WhatsApp pro número da empresa. Desacopla o webhook Meta do processamento (Meta espera 200 rápido, processamento real fica pro worker).',
     recebeDe: ['Backend FastAPI (router /webhooks/whatsapp enfileira)'],
     entrega: ['Worker de webhooks (consumer)'],
+    payloadEntrada: {
+      titulo: 'Payload do webhook Meta (vem do backend)',
+      tipo: 'json',
+      conteudo: `{
+  "tipo": "whatsapp_inbound",
+  "tenant_id": "genesis",
+  "payload": {
+    "entry": [{
+      "changes": [{
+        "value": {
+          "messages": [{
+            "from": "5511999991234",
+            "id": "wamid.HBgL...",
+            "timestamp": "1747859672",
+            "text": { "body": "Quero saber sobre o curso" },
+            "type": "text"
+          }],
+          "contacts": [{
+            "profile": { "name": "Maria Silva" },
+            "wa_id": "5511999991234"
+          }]
+        }
+      }]
+    }]
+  }
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Mesma msg entregue ao webhook_worker',
+      tipo: 'json',
+      conteudo: `// Worker recebe o JSON acima inteiro
+// e chama:
+await service.processar_whatsapp(
+  body["payload"],
+  tenant_id=body["tenant_id"]
+)`,
+    },
   },
   {
     id: 'worker-campanha-hoje',
@@ -62,6 +151,37 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Consome msg da fila. Verifica status anti-redelivery. Chama CampanhaService.disparar(): carrega destinatários, resolve variáveis, chama Meta API um a um, atualiza status no banco.',
     recebeDe: ['Service Bus `genesis-campanhas`'],
     entrega: ['HTTP POST direto pra Meta Graph API', 'UPDATE em campanha_destinatarios + campanhas no Azure SQL'],
+    payloadEntrada: {
+      titulo: 'Msg lida do Service Bus',
+      tipo: 'json',
+      conteudo: `{
+  "tipo": "campanha_disparo",
+  "campanha_id": "4f5e-...-c8a1",
+  "tenant_id": "genesis"
+}`,
+    },
+    payloadSaida: {
+      titulo: 'HTTP POST que o worker faz pra Meta (loop por destinatário)',
+      tipo: 'http',
+      conteudo: `POST https://graph.facebook.com/v19.0/{phone_id}/messages
+Authorization: Bearer EAAxx...
+
+{
+  "messaging_product": "whatsapp",
+  "to": "5511999991234",
+  "type": "template",
+  "template": {
+    "name": "boas_vindas_compra",
+    "language": { "code": "pt_BR" },
+    "components": [{
+      "type": "body",
+      "parameters": [
+        { "type": "text", "text": "Maria" }
+      ]
+    }]
+  }
+}`,
+    },
     observacoes: [
       'Hoje envia 1 destinatário por vez (single-threaded).',
       '`asyncio.sleep(0.5)` hardcoded entre envios — 8 minutos a mais em 1000 contatos.',
@@ -79,6 +199,48 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Quando cliente responde no WhatsApp, processa o payload Meta: cria/atualiza Contato, abre/atualiza Conversa, insere Mensagem direcao=entrada, marca não-lida, dispara broadcast WebSocket.',
     recebeDe: ['Service Bus `genesis-webhooks`'],
     entrega: ['INSERT/UPDATE em contatos, conversas, mensagens (Azure SQL)', 'Broadcast WebSocket pro frontend'],
+    payloadEntrada: {
+      titulo: 'Msg lida do SB com payload Meta dentro',
+      tipo: 'json',
+      conteudo: `{
+  "tipo": "whatsapp_inbound",
+  "tenant_id": "genesis",
+  "payload": {
+    "messages": [{
+      "from": "5511999991234",
+      "id": "wamid.HBgL...",
+      "text": { "body": "Quero saber sobre o curso" },
+      "type": "text"
+    }],
+    "contacts": [{
+      "profile": { "name": "Maria Silva" },
+      "wa_id": "5511999991234"
+    }]
+  }
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Operações no banco + broadcast WS',
+      tipo: 'json',
+      conteudo: `// 1. UPSERT contato (dedup por telefone E.164)
+INSERT INTO contatos (id, tenant_id, nome, telefone, telefone_e164, ...)
+VALUES (..., 'Maria Silva', '5511999991234', '+5511999991234', ...)
+
+// 2. UPSERT conversa
+INSERT INTO conversas (contato_id, status, ultima_msg_entrada_at)
+VALUES (..., 'nao_lida', NOW())
+
+// 3. INSERT mensagem
+INSERT INTO mensagens (conversa_id, direcao, conteudo, wamid)
+VALUES (..., 'entrada', 'Quero saber sobre o curso', 'wamid.HBgL...')
+
+// 4. Broadcast WebSocket pro tenant
+ws.broadcast(tenant_id, {
+  "evento": "mensagem_entrada",
+  "conversa_id": "...",
+  "mensagem": { ... }
+})`,
+    },
   },
   {
     id: 'meta-hoje',
@@ -90,6 +252,41 @@ export const blocosHoje: Bloco[] = [
     oQueFaz: 'Envia mensagens WhatsApp pelos templates aprovados. Recebe nossos POST, retorna wamid no sucesso. Manda webhook pra gente quando alguém responde.',
     recebeDe: ['Worker de campanhas (envia template)', 'Frontend operador (envia texto livre)'],
     entrega: ['Mensagem entregue ao celular do destinatário', 'Webhook inbound de volta pro backend'],
+    payloadEntrada: {
+      titulo: 'Request do Genesis (envio template)',
+      tipo: 'http',
+      conteudo: `POST /v19.0/{phone_id}/messages
+Authorization: Bearer EAAxx...
+
+{
+  "messaging_product": "whatsapp",
+  "to": "5511999991234",
+  "type": "template",
+  "template": {
+    "name": "boas_vindas_compra",
+    "language": { "code": "pt_BR" },
+    "components": [...]
+  }
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Resposta Meta + webhook inbound (futuro)',
+      tipo: 'json',
+      conteudo: `// 1. Resposta HTTP 200 imediata
+{
+  "messaging_product": "whatsapp",
+  "contacts": [{ "input": "5511999991234", "wa_id": "5511999991234" }],
+  "messages": [{ "id": "wamid.HBgL...XXX" }]
+}
+
+// 2. Quando cliente responde, Meta nos manda webhook:
+POST /webhooks/whatsapp
+X-Hub-Signature-256: sha256=...
+
+{
+  "entry": [{ "changes": [{ "value": { "messages": [...] } }] }]
+}`,
+    },
   },
   {
     id: 'db-hoje',
@@ -176,6 +373,36 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'Recebe mensagens RENDERIZADAS (com idempotency_key, channel, to, template+vars). Sessions por tenant pra preservar ordem se necessário. DLQ nativa pra falhas crônicas.',
     recebeDe: ['Dispatcher Genesis', 'Cobrança (futuro)', 'Phoenix (futuro)'],
     entrega: ['messaging-service worker'],
+    payloadEntrada: {
+      titulo: 'Mensagem renderizada (publicada por Genesis/Cobrança/Phoenix)',
+      tipo: 'json',
+      conteudo: `{
+  "channel": "whatsapp",
+  "to": "+5511999991234",
+  "from_app": "genesis",
+  "tenant_id": "cliente-42",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+
+  "template_name": "boas_vindas_compra",
+  "template_language": "pt_BR",
+  "template_components": [{
+    "type": "body",
+    "parameters": [{ "type": "text", "text": "Maria" }]
+  }]
+}
+
+// Session ID = "cliente-42"  (ordem por tenant)`,
+    },
+    payloadSaida: {
+      titulo: 'Mesma msg entregue ao worker da Polly',
+      tipo: 'json',
+      conteudo: `// messaging-service consome a msg e:
+// 1. SELECT messages WHERE from_app='genesis' AND idempotency_key=X
+// 2. Se não existir, prossegue. Se existir, retorna idempotent.
+// 3. Verifica circuit breaker + rate limit.
+// 4. Chama provider (Meta/Twilio/IG).
+// 5. complete_message(msg)`,
+    },
   },
   {
     id: 'sb-status',
@@ -187,6 +414,38 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'messaging-service publica eventos sent/delivered/read/failed. Genesis Status Worker consome pra atualizar mensagem na conversa. BI futuro pode se inscrever também.',
     recebeDe: ['messaging-service (publica)'],
     entrega: ['Genesis Status Worker (consumer)', 'BI/dashboards (consumer futuro)'],
+    payloadEntrada: {
+      titulo: 'Evento publicado pelo messaging-service',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.sent",  // ou "delivered", "read", "failed"
+  "from_app": "genesis",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+  "tenant_id": "cliente-42",
+  "channel": "whatsapp",
+  "provider": "meta",
+  "provider_message_id": "wamid.HBgL...",  // wamid no caso Meta
+  "to": "+5511999991234",
+  "occurred_at": "2026-05-21T20:14:35.421Z",
+
+  // só em failed:
+  "error_code": null,
+  "error_message": null
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Como Genesis Status Worker consome',
+      tipo: 'json',
+      conteudo: `// Topic → cada subscriber tem sua subscription
+// 1. UPDATE mensagens SET status=?, wamid=? WHERE wamid=?
+// 2. UPDATE campanhas SET enviadas=enviadas+1 WHERE id=?
+// 3. Broadcast WebSocket pro frontend
+ws.broadcast(tenant_id, {
+  "evento": "status_atualizado",
+  "wamid": "wamid.HBgL...",
+  "novo_status": "lida"
+})`,
+    },
   },
   {
     id: 'sb-inbound',
@@ -198,6 +457,39 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'messaging-service recebe webhook de Meta/Twilio/IG, normaliza pra payload padrão, publica aqui. Genesis consome pra criar Conversa/Mensagem. Adicionar canal novo = só messaging-service muda.',
     recebeDe: ['messaging-service (publica após receber webhook)'],
     entrega: ['Genesis Inbound Worker', 'Polly automações futuras (consumer)'],
+    payloadEntrada: {
+      titulo: 'Evento NORMALIZADO (mesmo formato pra WA/SMS/IG)',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.received",
+  "tenant_id": "cliente-42",
+  "channel": "whatsapp",     // ou "sms", "instagram"
+  "provider": "meta",        // ou "twilio", "ig"
+
+  "from": "+5511999991234",
+  "from_name": "Maria Silva",
+  "to": "+5511555555555",    // numero da empresa
+
+  "message_id": "wamid.HBgL...",
+  "occurred_at": "2026-05-21T20:18:02.103Z",
+
+  "content": {
+    "type": "text",
+    "text": "Quero saber sobre o curso"
+  },
+
+  "raw_provider_payload": { ... }  // payload original do provider
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Como Genesis Inbound Worker consome',
+      tipo: 'json',
+      conteudo: `// Cria/atualiza Contato + Conversa + Mensagem
+// (igual webhook_worker de hoje, mas com payload normalizado)
+//
+// Vantagem: tratamento idêntico pra WA, SMS, IG
+// Adicionar Telegram = só messaging-service muda, Genesis nem percebe`,
+    },
   },
   {
     id: 'worker-status',

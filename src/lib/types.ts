@@ -12,6 +12,9 @@ export interface Bloco {
   recebeDe: string[];
   entrega: string[];
   observacoes?: string[];
+
+  payloadEntrada?: { titulo: string; conteudo: string; tipo?: 'json' | 'http' };
+  payloadSaida?:   { titulo: string; conteudo: string; tipo?: 'json' | 'http' };
 }
 
 export interface Ator {
