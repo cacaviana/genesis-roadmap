@@ -34,14 +34,16 @@ export const execucao: ItemExec[] = [
   {
     bloco: 'Bloco 3',
     titulo: 'Fase 0 PROD — workers separados',
-    estado: 'em-andamento',
+    estado: 'feito',
     detalhes: [
-      'PR #10 MERGEADO em main (config: WEBHOOK_WORKER_SEPARADO + workflow novo)',
-      'App Service `worker-genesis-webhooks` provisionado',
-      'Env vars clonadas do genesisbackendd',
-      'Deploy 1 falhou (Oryx interferiu) — workaround: SCM_DO_BUILD=false',
-      'Deploy 2 em curso após correção',
-      'Próximo: setar WEBHOOK_WORKER_SEPARADO=true no genesisbackendd PROD',
+      '✅ PR #10 MERGEADO em main',
+      '✅ App Service worker-genesis-webhooks provisionado E rodando',
+      '✅ Logs confirmam: "Worker WEBHOOKS aguardando mensagens" no app dedicado',
+      '✅ Env var WEBHOOK_WORKER_SEPARADO=true ativa em genesisbackendd PROD',
+      '✅ Genesis PROD restart: NÃO mais roda webhook_worker (zero regressão)',
+      '✅ /api/health 200 OK pós-restart',
+      'Criado main_worker_webhooks.py (entry point padrão IT Valley)',
+      'Removido WEBSITES_PORT/APP_PORT (worker sem HTTP)',
     ],
   },
   {
@@ -90,11 +92,13 @@ export const execucao: ItemExec[] = [
   {
     bloco: 'Bloco 7',
     titulo: 'Handoff + atualização do site',
-    estado: 'em-andamento',
+    estado: 'feito',
     detalhes: [
-      'Esta própria aba',
-      'Documento de handoff em docs/handoff-execucao.md',
-      'Lista de coisas pra Polly conversar',
+      '✅ Documento docs/handoff-execucao-2026-05-22.md (commitado em main)',
+      '✅ Roteiro smoke test docs/smoke-test-messaging.md',
+      '✅ Esta aba "Execução" no site',
+      '✅ Memória salva sobre receita Oryx (SCM=true + source-only)',
+      'Decisão honesta: arquitetura MONTADA + VALIDADA, mas Fase 2/3 não ATIVADA em PROD ainda (segura)',
     ],
   },
 ];
