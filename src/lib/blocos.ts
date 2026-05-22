@@ -326,6 +326,31 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'Recebe HTTP do frontend, valida, publica msg no Service Bus, retorna 202. ZERO workers — todos isolados em App Services dedicados. CPU/memória só pra responder requests.',
     recebeDe: ['Frontend (HTTP)'],
     entrega: ['Service Bus fila `campaigns.dispatch`'],
+    payloadEntrada: {
+      titulo: 'HTTP do frontend (igual hoje)',
+      tipo: 'http',
+      conteudo: `POST /api/campanhas/4f5e-...-c8a1/disparar
+Authorization: Bearer eyJhbGc...
+Content-Type: application/json`,
+    },
+    payloadSaida: {
+      titulo: 'Publica em campaigns.dispatch + responde 202',
+      tipo: 'json',
+      conteudo: `// 1. ServiceBusMessage publicada em campaigns.dispatch
+{
+  "event": "campaign.dispatch_requested",
+  "campanha_id": "4f5e-...-c8a1",
+  "tenant_id": "cliente-42",
+  "agendado_para": null,         // ou ISO se for agendada
+  "publicado_em": "2026-05-21T20:14:32Z"
+}
+
+// 2. Resposta HTTP 202 imediata pro frontend
+{
+  "status": "na_fila",
+  "campanha_id": "4f5e-...-c8a1"
+}`,
+    },
     observacoes: ['Webhook Meta sai daqui — agora chega no messaging-service.'],
   },
   {
@@ -338,6 +363,41 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'Consome msg "campanha X disparada". Lê destinatários em batches do CRM. Renderiza variáveis (__nome__ → "Maria"). Decide canal por contato (WA/SMS/IG). Decide janela 24h (template ou texto livre). Publica N mensagens em `messaging.send`.',
     recebeDe: ['Service Bus `campaigns.dispatch`'],
     entrega: ['Service Bus `messaging.send` (com idempotency_key por destinatário)'],
+    payloadEntrada: {
+      titulo: 'Msg lida de campaigns.dispatch',
+      tipo: 'json',
+      conteudo: `{
+  "event": "campaign.dispatch_requested",
+  "campanha_id": "4f5e-...-c8a1",
+  "tenant_id": "cliente-42",
+  "agendado_para": null,
+  "publicado_em": "2026-05-21T20:14:32Z"
+}`,
+    },
+    payloadSaida: {
+      titulo: 'N mensagens renderizadas publicadas em messaging.send',
+      tipo: 'json',
+      conteudo: `// Pra CADA destinatário (loop com batches de 500):
+{
+  "channel": "whatsapp",           // genesis decidiu
+  "to": "+5511999991234",          // do CRM
+  "from_app": "genesis",
+  "tenant_id": "cliente-42",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+
+  // genesis ja resolveu vars do template:
+  "template_name": "boas_vindas_compra",
+  "template_language": "pt_BR",
+  "template_components": [{
+    "type": "body",
+    "parameters": [
+      { "type": "text", "text": "Maria" }
+    ]
+  }]
+}
+
+// Header: SessionId = "cliente-42"  (ordem por tenant)`,
+    },
     observacoes: ['Substitui o `campanha_worker` atual, mas SEM chamar Meta direto.'],
   },
   {
@@ -350,6 +410,53 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'Consome `messaging.send`. Decide provider (WA→Meta, SMS→Twilio, IG→IG Graph). Aplica rate limit por tenant+provider. Circuit breaker por provider. Idempotência via UNIQUE(from_app, idempotency_key). Envia. Publica resultado em `messaging.status`.',
     recebeDe: ['Service Bus `messaging.send` (de Genesis, Cobrança, Phoenix, etc.)'],
     entrega: ['Meta / Twilio / Instagram Graph (HTTP)', 'Service Bus topic `messaging.status`'],
+    payloadEntrada: {
+      titulo: 'Msg lida de messaging.send (renderizada)',
+      tipo: 'json',
+      conteudo: `{
+  "channel": "whatsapp",
+  "to": "+5511999991234",
+  "from_app": "genesis",
+  "tenant_id": "cliente-42",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+  "template_name": "boas_vindas_compra",
+  "template_language": "pt_BR",
+  "template_components": [...]
+}`,
+    },
+    payloadSaida: {
+      titulo: 'HTTP pro provider + evento de status',
+      tipo: 'http',
+      conteudo: `// 1. POST pro Meta Graph API
+POST https://graph.facebook.com/v19.0/{phone_id}/messages
+Authorization: Bearer EAAxx...
+
+{
+  "messaging_product": "whatsapp",
+  "to": "5511999991234",
+  "type": "template",
+  "template": {
+    "name": "boas_vindas_compra",
+    "language": { "code": "pt_BR" },
+    "components": [...]
+  }
+}
+
+// 2. Resposta Meta: { messages: [{ id: "wamid.HBgL..." }] }
+
+// 3. Publica evento em messaging.status:
+{
+  "event": "message.sent",
+  "from_app": "genesis",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+  "tenant_id": "cliente-42",
+  "channel": "whatsapp",
+  "provider": "meta",
+  "provider_message_id": "wamid.HBgL...",
+  "to": "+5511999991234",
+  "occurred_at": "2026-05-21T20:14:35Z"
+}`,
+    },
     observacoes: ['Outros sistemas (Cobrança, Phoenix) usam o mesmo serviço sem implementar provider.'],
   },
   {
@@ -362,6 +469,32 @@ export const blocosFuturo: Bloco[] = [
     oQueFaz: 'Recebe 1 msg quando o operador clica "Disparar". Garante que o Dispatcher pega e processa.',
     recebeDe: ['Backend FastAPI'],
     entrega: ['Dispatcher worker'],
+    payloadEntrada: {
+      titulo: 'Msg publicada pelo backend',
+      tipo: 'json',
+      conteudo: `{
+  "event": "campaign.dispatch_requested",
+  "campanha_id": "4f5e-...-c8a1",
+  "tenant_id": "cliente-42",
+  "agendado_para": null,
+  "publicado_em": "2026-05-21T20:14:32Z"
+}
+
+// MessageId: <auto-gerado>
+// EnqueuedTimeUtc: 2026-05-21T20:14:32Z
+// DeliveryCount: 1`,
+    },
+    payloadSaida: {
+      titulo: 'Mesma msg entregue ao Dispatcher Worker',
+      tipo: 'json',
+      conteudo: `// Worker pega via async for msg in receiver
+// e chama:
+await dispatcher.processar(
+  campanha_id=body["campanha_id"],
+  tenant_id=body["tenant_id"]
+)
+// Depois: await receiver.complete_message(msg)`,
+    },
   },
   {
     id: 'sb-send',
@@ -501,6 +634,44 @@ ws.broadcast(tenant_id, {
     oQueFaz: 'Consome `messaging.status`. Para cada evento (sent/delivered/read/failed), atualiza `mensagem.status` e wamid no banco do Genesis, atualiza contadores da campanha, faz broadcast WebSocket pro frontend.',
     recebeDe: ['Tópico `messaging.status`'],
     entrega: ['UPDATE mensagens, campanhas (Azure SQL)', 'Broadcast WebSocket'],
+    payloadEntrada: {
+      titulo: 'Evento consumido da subscription genesis-status-sub',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.delivered",  // ou sent/read/failed
+  "from_app": "genesis",
+  "idempotency_key": "camp-4f5e-dest-Y89",
+  "tenant_id": "cliente-42",
+  "channel": "whatsapp",
+  "provider": "meta",
+  "provider_message_id": "wamid.HBgL...",
+  "to": "+5511999991234",
+  "occurred_at": "2026-05-21T20:18:02Z"
+}`,
+    },
+    payloadSaida: {
+      titulo: 'UPDATEs no banco + broadcast WS',
+      tipo: 'json',
+      conteudo: `// 1. UPDATE mensagem
+UPDATE mensagens
+   SET status = 'entregue',
+       wamid = 'wamid.HBgL...',
+       updated_at = NOW()
+ WHERE wamid = 'wamid.HBgL...'
+   AND tenant_id = 'cliente-42'
+
+// 2. UPDATE contador da campanha (apenas se evento = sent)
+UPDATE campanhas
+   SET enviadas = enviadas + 1
+ WHERE id = '4f5e-...-c8a1'
+
+// 3. Broadcast WebSocket pro frontend
+ws.broadcast(tenant_id="cliente-42", {
+  "evento": "status_atualizado",
+  "wamid": "wamid.HBgL...",
+  "novo_status": "entregue"
+})`,
+    },
   },
   {
     id: 'worker-inbound',
@@ -512,6 +683,55 @@ ws.broadcast(tenant_id, {
     oQueFaz: 'Consome `messaging.inbound`. Cria/atualiza Contato (E.164), abre/atualiza Conversa, insere Mensagem direcao=entrada, marca não-lida, broadcast WebSocket. Igual ao webhook_worker de hoje, mas vem de tópico unificado (WA + SMS + IG).',
     recebeDe: ['Tópico `messaging.inbound`'],
     entrega: ['INSERT em contatos/conversas/mensagens', 'Broadcast WebSocket'],
+    payloadEntrada: {
+      titulo: 'Evento normalizado (mesmo formato pra WA/SMS/IG)',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.received",
+  "tenant_id": "cliente-42",
+  "channel": "whatsapp",        // ou "sms", "instagram"
+  "provider": "meta",
+
+  "from": "+5511999991234",
+  "from_name": "Maria Silva",
+  "to": "+5511555555555",
+
+  "message_id": "wamid.HBgL...",
+  "occurred_at": "2026-05-21T20:18:02Z",
+
+  "content": {
+    "type": "text",
+    "text": "Quero saber sobre o curso"
+  }
+}`,
+    },
+    payloadSaida: {
+      titulo: 'UPSERTs no banco + broadcast WS',
+      tipo: 'json',
+      conteudo: `// 1. UPSERT Contato (dedup por E.164)
+INSERT INTO contatos (id, tenant_id, nome, telefone, telefone_e164)
+VALUES (..., 'Maria Silva', '5511999991234', '+5511999991234')
+ON CONFLICT (tenant_id, telefone_e164) DO UPDATE
+   SET nome = COALESCE(contatos.nome, EXCLUDED.nome)
+
+// 2. UPSERT Conversa (status = nao_lida)
+INSERT INTO conversas (contato_id, tenant_id, status,
+                       ultima_msg_entrada_at)
+VALUES (..., 'nao_lida', NOW())
+
+// 3. INSERT Mensagem (entrada)
+INSERT INTO mensagens (conversa_id, direcao, conteudo,
+                       wamid, status, canal)
+VALUES (..., 'entrada', 'Quero saber sobre o curso',
+        'wamid.HBgL...', 'recebida', 'whatsapp')
+
+// 4. Broadcast WebSocket pro frontend
+ws.broadcast(tenant_id="cliente-42", {
+  "evento": "mensagem_entrada",
+  "conversa_id": "...",
+  "mensagem": { ... }
+})`,
+    },
   },
   {
     id: 'meta-novo',
