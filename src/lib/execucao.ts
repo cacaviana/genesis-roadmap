@@ -39,7 +39,8 @@ export const execucao: ItemExec[] = [
       'PR #10 MERGEADO em main (config: WEBHOOK_WORKER_SEPARADO + workflow novo)',
       'App Service `worker-genesis-webhooks` provisionado',
       'Env vars clonadas do genesisbackendd',
-      'Aguardando GitHub Actions deployar',
+      'Deploy 1 falhou (Oryx interferiu) — workaround: SCM_DO_BUILD=false',
+      'Deploy 2 em curso após correção',
       'Próximo: setar WEBHOOK_WORKER_SEPARADO=true no genesisbackendd PROD',
     ],
   },
@@ -59,7 +60,7 @@ export const execucao: ItemExec[] = [
   {
     bloco: 'Bloco 5',
     titulo: 'messaging-service sandbox completo',
-    estado: 'em-andamento',
+    estado: 'bloqueado',
     detalhes: [
       'Fork criado: github.com/cacaviana/messaging-service',
       'Branch `CU-sandbox-completo` com:',
@@ -68,16 +69,19 @@ export const execucao: ItemExec[] = [
       '  + workers/send_worker.py (consome messaging.send)',
       '  + routers/webhooks_meta.py (recebe webhook Meta + republica)',
       'Workflow GHA deploy-sandbox.yml',
-      'Aguardando deploy subir o app no Azure',
+      '⚠️ BLOQUEADO: deploy do App Service não consegue extrair antenv',
+      'Conflito Oryx ↔ antenv pré-built. 4 tentativas sem sucesso hoje.',
+      'Workaround: usar app-messaging-service-accp da Polly (já rodando)',
     ],
   },
   {
     bloco: 'Bloco 6',
     titulo: 'Smoke test E2E',
-    estado: 'pendente',
+    estado: 'bloqueado',
     detalhes: [
-      'Vai validar: publicar msg em messaging.send → worker consome → mock-mode Meta retorna wamid → publica status no topic → validar evento',
-      'Bloqueado até messaging-service-sandbox subir saudável',
+      'Bloqueado pelo Bloco 5 (sandbox não rodando)',
+      'Alternativa pendente: usar app-messaging-service-accp da Polly via HTTP',
+      'Mas a versão dela não tem os workers SB ainda',
     ],
   },
   {
@@ -183,6 +187,11 @@ export interface Pendencia {
 }
 
 export const pendencias: Pendencia[] = [
+  {
+    prioridade: 'alta',
+    acao: 'Resolver deploy do messaging-service-sandbox',
+    contexto: 'Conflito Oryx + antenv. 4 abordagens tentadas. Sugestões: BUILD_FLAGS=UseExpressBuild, Dockerfile custom, ou WebSSH manual.',
+  },
   {
     prioridade: 'alta',
     acao: 'Conversar com Polly sobre as mudanças no fork',
