@@ -274,3 +274,72 @@ button {
 .chip.chip--warn  { background: rgba(245,158,11,0.10); color: var(--warn); border-color: rgba(245,158,11,0.30); }
 .chip.chip--crit  { background: rgba(239,68,68,0.10); color: var(--crit); border-color: rgba(239,68,68,0.30); }
 .chip.chip--info  { background: rgba(96,165,250,0.10); color: var(--info); border-color: rgba(96,165,250,0.30); }
+
+/* ===== Tabela ===== */
+.tabela-donos {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 14px;
+}
+.tabela-donos thead th {
+  background: var(--bg-input);
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.tabela-donos thead th.centro { text-align: center; width: 140px; }
+.tabela-donos tbody td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.tabela-donos tbody td.centro { text-align: center; }
+.tabela-donos tbody tr:hover { background: var(--bg-card-hover); }
+.tabela-donos .dono-sim {
+  color: var(--ok);
+  font-size: 18px;
+  font-weight: 700;
+}
+.tabela-donos .dono-nao {
+  color: var(--text-muted);
+  font-size: 14px;
+  opacity: 0.4;
+}
+.tabela-donos .grupo-titulo td {
+  background: var(--purple-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--purple);
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-purple);
+}
+
+/* ===== Code block payload ===== */
+.payload {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  overflow-x: auto;
+  white-space: pre;
+}
+.payload .key { color: var(--purple); }
+.payload .str { color: #86EFAC; }
+.payload .num { color: #FBBF24; }
+.payload .comment { color: var(--text-muted); font-style: italic; }

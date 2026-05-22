@@ -168,6 +168,111 @@
       </div>
 
       <div class="grupo">
+        <h4>O que o Genesis prepara antes de mandar pra Polly</h4>
+        <p class="bloco-intro" style="margin-bottom: 20px;">
+          Genesis não joga "contato bruto" na fila. O Dispatcher do Genesis <strong>renderiza variáveis</strong> (lê o CRM), <strong>escolhe o canal</strong> (preferência por contato),
+          <strong>decide janela 24h</strong> (template HSM ou texto livre) e só então publica a mensagem PRONTA em <code>messaging.send</code>.
+          O messaging-service da Polly só executa o transporte.
+        </p>
+
+        <div class="grid-2" style="margin-top: 16px;">
+          <div>
+            <h4 style="margin-bottom: 8px;">Payload exemplo (Genesis → fila)</h4>
+            <div class="payload"><span class="comment">// 1 destinatario = 1 msg em messaging.send</span>
+{`
+  `}<span class="key">"channel"</span>: <span class="str">"whatsapp"</span>,
+  <span class="key">"to"</span>: <span class="str">"+5511999991234"</span>,
+  <span class="key">"from_app"</span>: <span class="str">"genesis"</span>,
+  <span class="key">"tenant_id"</span>: <span class="str">"cliente-42"</span>,
+
+  <span class="comment">// idempotency_key UNICO por destinatario</span>
+  <span class="key">"idempotency_key"</span>: <span class="str">"camp-X-dest-Y"</span>,
+
+  <span class="comment">// genesis ja resolveu __nome__ -&gt; "Maria"</span>
+  <span class="key">"template_name"</span>: <span class="str">"boas_vindas_compra"</span>,
+  <span class="key">"template_language"</span>: <span class="str">"pt_BR"</span>,
+  <span class="key">"template_components"</span>: [
+    {`{`}
+      <span class="key">"type"</span>: <span class="str">"body"</span>,
+      <span class="key">"parameters"</span>: [
+        {`{`}<span class="key">"type"</span>: <span class="str">"text"</span>, <span class="key">"text"</span>: <span class="str">"Maria"</span>{`}`}
+      ]
+    {`}`}
+  ]
+{`}`}</div>
+          </div>
+
+          <div>
+            <h4 style="margin-bottom: 8px;">Decisões que Genesis toma antes</h4>
+            <div class="bloco" style="cursor: default; margin-bottom: 12px;">
+              <span class="tag">1 · Resolução de variáveis</span>
+              <h3>Lê o CRM e substitui</h3>
+              <p class="desc"><code>__nome__</code> vira <code>"Maria"</code>. Polly não conhece o CRM, então quem resolve é o Genesis.</p>
+            </div>
+            <div class="bloco" style="cursor: default; margin-bottom: 12px;">
+              <span class="tag">2 · Escolha de canal</span>
+              <h3>WA, SMS ou IG?</h3>
+              <p class="desc">Olha preferência do contato (ou da campanha). Pode ter fallback: tenta WA, se falhar manda SMS.</p>
+            </div>
+            <div class="bloco" style="cursor: default; margin-bottom: 12px;">
+              <span class="tag">3 · Janela 24h Meta</span>
+              <h3>Template ou texto livre?</h3>
+              <p class="desc">Conversa aberta há &lt;24h: pode mandar texto livre (<code>channel: "whatsapp_text"</code>). Fora da janela: <strong>obrigatório template HSM</strong>.</p>
+            </div>
+            <div class="bloco" style="cursor: default;">
+              <span class="tag">4 · Idempotency key</span>
+              <h3>Chave única por destinatário</h3>
+              <p class="desc">Garante que se a msg cair na fila 2× (redelivery), Polly NÃO dispara WhatsApp duplicado pro Maria.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Quem é dono do que</h4>
+        <p class="bloco-intro" style="margin-bottom: 20px;">
+          Linha clara: Genesis = <strong>cérebro de mensageria</strong> (CRM + conversa + lógica). messaging-service da Polly = <strong>transporte multi-provider</strong>.
+          Quando você adicionar Cobrança e Phoenix ao ecossistema, eles vão publicar direto no <code>messaging.send</code> sem precisar do Genesis.
+        </p>
+
+        <table class="tabela-donos">
+          <thead>
+            <tr>
+              <th>Responsabilidade</th>
+              <th class="centro">Genesis</th>
+              <th class="centro">messaging-service</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="grupo-titulo"><td colspan="3">Inteligência de mensageria</td></tr>
+            <tr><td>CRM (Contato, segmentação)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Campanhas (criação, agendamento)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Conversa + janela 24h</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Renderização de variáveis (__nome__ → "Maria")</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Escolha de canal (WA/SMS/IG) por contato</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Templates Meta (cache + sync pra UI)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+            <tr><td>Automações (Hotmart, Voomp, MemberKit)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-nao">—</span></td></tr>
+
+            <tr class="grupo-titulo"><td colspan="3">Transporte multi-provider</td></tr>
+            <tr><td>Falar com Meta Cloud API</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Falar com Twilio (SMS)</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Falar com Instagram Graph API</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Circuit breaker por provider</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Rate limit por (tenant + provider)</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Idempotência de envio (UNIQUE no banco)</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Auditoria de envio (tabela <code>messages</code>)</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Receber webhook Meta / Twilio / IG</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Republicar inbound/status em tópico</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Gerenciar secrets dos providers</td><td class="centro"><span class="dono-nao">—</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+
+            <tr class="grupo-titulo"><td colspan="3">Compartilhado</td></tr>
+            <tr><td>Multi-tenancy (tenant_id em todo lugar)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+            <tr><td>Observabilidade (logs + métricas por tenant)</td><td class="centro"><span class="dono-sim">✓</span></td><td class="centro"><span class="dono-sim">✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grupo">
         <h4>O que muda em uma frase</h4>
         <div class="grid-2">
           <div class="bloco bloco--ok" style="cursor: default;">
