@@ -10,8 +10,9 @@
   import { propriedades, naming, estadoGenesis } from './lib/serviceBus';
   import { quemFazOQue, antipadroes, estadosMsg, oQueGenesisGuarda } from './lib/bancoFila';
   import { execucao, recursosProvisionados, prs, pendencias } from './lib/execucao';
+  import { blocosAgora } from './lib/agora';
 
-  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao';
+  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao';
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
@@ -65,7 +66,8 @@
     </div>
 
     <nav class="tabs">
-      <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como é hoje</button>
+      <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como era hoje</button>
+      <button class:ativo={tab === 'agora'} onclick={() => tab = 'agora'}>🆕 Como está agora</button>
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
       <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
       <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
@@ -137,6 +139,68 @@
             <span class="tag">Problema 4</span>
             <h3>Acoplamento direto com Meta</h3>
             <p class="desc">Genesis chama Meta API direto. Não dá pra trocar provider, não tem circuit breaker, não tem rate limit por tenant.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'agora'}
+    <section>
+      <h2>🆕 Como está AGORA (pós-sessão 2026-05-22)</h2>
+      <p class="bloco-intro">
+        Snapshot do estado <strong>após a Fase 0 ativada em PROD + sandbox completo rodando</strong>. Entre "Como era hoje" e "Como deve ficar". Genesis PROD continua disparando via Meta direto (campanha_worker), mas <strong>workers já estão isolados</strong> e <strong>toda infra da arquitetura alvo está pronta</strong> (filas, tópicos, sandbox messaging-service).
+      </p>
+
+      <div class="grupo">
+        <h4>O que mudou em PROD</h4>
+        <div class="grid-2">
+          {#each blocosAgora.filter(b => ['api-agora','worker-webhooks-agora','sb-novo-agora','code-fase2-agora'].includes(b.id)) as b}
+            <Bloco bloco={b} onclick={abrirPainel} />
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>O que continua igual em PROD</h4>
+        <div class="grid-2">
+          {#each blocosAgora.filter(b => ['fe-agora','worker-campanhas-agora','meta-agora'].includes(b.id)) as b}
+            <Bloco bloco={b} onclick={abrirPainel} />
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Sandbox paralelo (não toca PROD)</h4>
+        <div class="grid-2">
+          {#each blocosAgora.filter(b => b.id === 'msg-sandbox-agora') as b}
+            <Bloco bloco={b} onclick={abrirPainel} />
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Caminho pra completar a arquitetura</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">Próximo passo</span>
+            <h3>Ativar Fase 2 em staging (accp)</h3>
+            <p class="desc">Mergear PR #11 + ligar flags em app-genesis-backend-accp + refactor `disparar`. 1 tenant piloto valida o pipeline real.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Depois</span>
+            <h3>Ativar Fase 2 em PROD (canary)</h3>
+            <p class="desc">10% → 50% → 100% dos tenants. Cada etapa monitorada 24-48h. Reversível por flag.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Fase 3</span>
+            <h3>Cortar cordão Meta direto</h3>
+            <p class="desc">Webhook Meta aponta pro messaging-service. Remover MetaAPI do Genesis. Necessita PR adicional + alinhamento Polly.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Fase 4 (futuro)</span>
+            <h3>Multi-canal SMS + IG</h3>
+            <p class="desc">Polly implementa Twilio + IG no messaging-service. Genesis ganha seletor de canal por contato.</p>
           </div>
         </div>
       </div>
