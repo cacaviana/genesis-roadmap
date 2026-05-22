@@ -118,14 +118,42 @@ Authorization: Bearer ...`,
   },
   {
     id: 'code-fase2-agora',
-    nome: 'Código Fase 2 pronto',
-    tag: 'Branch + PR #11',
-    resumo: 'Pronto pra mergear, mas flags OFF — comportamento inalterado.',
-    variante: 'ghost',
-    ondeMora: 'Branch CU-fase2-messaging-service · PR #11 → accp',
-    oQueFaz: '3 workers novos do Genesis (dispatcher, status, inbound) + messaging_client. Todos atrás de feature flags OFF default.',
-    recebeDe: ['Review/merge → ativação gradual'],
-    entrega: ['Quando flags ON: publish em messaging.send + consome status/inbound'],
+    nome: '🔥 Fase 2 ATIVADA em ACCP',
+    tag: 'Staging — provada E2E',
+    resumo: 'PR #11 mergeado. Flags ON em app-genesis-backend-accp.',
+    variante: 'purple',
+    ondeMora: 'Branch CU-fase2-messaging-service MERGEADA em accp',
+    oQueFaz: 'CampanhaService.disparar com flag MESSAGING_SERVICE_ENABLED publica em messaging.send. status_updater_worker rodando em ACCP, consumindo messaging.status.',
+    recebeDe: ['messaging.status publicações (smoke test passou)'],
+    entrega: ['Update mensagens.status + broadcast WS'],
+    payloadEntrada: {
+      titulo: 'Evento publicado em messaging.status (smoke)',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.sent",
+  "provider_message_id": "wamid.FASE2SMOKE...",
+  "to": "+5511999990000",
+  ...
+}`,
+    },
+    payloadSaida: {
+      titulo: 'Log do worker ACCP (sucesso)',
+      tipo: 'json',
+      conteudo: `INFO | status_updater_worker |
+  status_updater_mensagem_nao_encontrada
+  wamid=wamid.FASE2SMOKE1779489439
+  event=message.sent
+
+# Comportamento certo: wamid fake = não acha
+# Com wamid real: UPDATE mensagens + broadcast WS`,
+    },
+    observacoes: [
+      '✅ PR #11 MERGEADO em accp',
+      '✅ MESSAGING_SERVICE_ENABLED=true em ACCP',
+      '✅ STATUS_UPDATER_WORKER_ENABLED=true em ACCP',
+      '✅ Smoke pub→consume validou pipeline',
+      '⏳ Próximo: ativar em PROD (canary)',
+    ],
   },
   {
     id: 'meta-agora',
