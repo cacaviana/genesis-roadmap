@@ -1,21 +1,39 @@
 <script lang="ts">
   import Bloco from './lib/Bloco.svelte';
   import PainelDetalhe from './lib/PainelDetalhe.svelte';
-  import type { Bloco as BlocoType } from './lib/types';
+  import Boneco from './lib/Boneco.svelte';
+  import Bola from './lib/Bola.svelte';
+  import PainelCaso from './lib/PainelCaso.svelte';
+  import type { Bloco as BlocoType, Caso, Ator } from './lib/types';
   import { blocosHoje, blocosFuturo, fasesPlano, ferramentas } from './lib/blocos';
+  import { atores, casos } from './lib/fluxo';
 
-  type Tab = 'hoje' | 'futuro' | 'plano' | 'ferramentas';
+  type Tab = 'hoje' | 'futuro' | 'acao' | 'plano' | 'ferramentas';
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
   let painelAberto = $state(false);
 
+  let casoSelecionado = $state<Caso | null>(null);
+  let atorSelecionado = $state<Ator | null>(null);
+  let painelCasoAberto = $state(false);
+
   function abrirPainel(b: BlocoType) {
     blocoSelecionado = b;
     painelAberto = true;
   }
-  function fechar() {
-    painelAberto = false;
+  function fechar() { painelAberto = false; }
+
+  function abrirCaso(c: Caso) {
+    casoSelecionado = c;
+    atorSelecionado = atores.find(a => a.id === c.atorId) ?? null;
+    painelCasoAberto = true;
+  }
+  function fecharCaso() { painelCasoAberto = false; }
+
+  function atorAtivo(atorId: string): boolean {
+    if (!casoSelecionado) return false;
+    return casoSelecionado.atorId === atorId;
   }
 
   let scrollY = $state(0);
@@ -24,6 +42,11 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   });
+
+  // pra cada caso, descobrir o índice da sua coluna (1..4)
+  function colunaDoCaso(c: Caso): number {
+    return atores.findIndex(a => a.id === c.atorId) + 1;
+  }
 </script>
 
 <div class="parallax-bg" style="transform: translateY({scrollY * 0.3}px);"></div>
@@ -41,6 +64,7 @@
     <nav class="tabs">
       <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como é hoje</button>
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
+      <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
@@ -300,6 +324,64 @@
     </section>
   {/if}
 
+  {#if tab === 'acao'}
+    <section>
+      <h2>Ação: enviar uma mensagem de campanha</h2>
+      <p class="bloco-intro">
+        Caso de uso completo, do clique do operador até o ✓✓ azul aparecer. <strong>4 atores</strong> nas colunas, <strong>14 passos</strong> em bolas numeradas — cada bola na coluna do ator que executa. Clique em qualquer bola pra entender o que acontece, tecnicamente, e por que importa.
+      </p>
+
+      <div class="diagrama">
+        <!-- Cabeçalho com bonequinhos -->
+        <div class="atores-linha">
+          {#each atores as ator}
+            <div class="ator-coluna-cabecalho">
+              <Boneco nome={ator.nome} papel={ator.papel} destaque={atorAtivo(ator.id)} />
+            </div>
+          {/each}
+        </div>
+
+        <!-- Grid de bolas: 1 linha por caso, coluna = ator -->
+        <div class="bolas-grid">
+          {#each casos as caso, i}
+            <div class="linha-caso" style="grid-column: {colunaDoCaso(caso)};">
+              <Bola {caso} onclick={abrirCaso} />
+            </div>
+            {#if i < casos.length - 1}
+              <div class="seta-vertical" style="grid-column: {colunaDoCaso(casos[i + 1])};">↓</div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Legenda do fluxo</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Passos 1-6 · Operador + Genesis</span>
+            <h3>Preparação no Genesis</h3>
+            <p class="desc">Clique → validação → leitura do CRM → renderização de variáveis → decisão de canal e janela 24h → publicação na fila do messaging-service.</p>
+          </div>
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">Passos 7-10 · messaging-service</span>
+            <h3>Transporte na Polly</h3>
+            <p class="desc">Idempotência → rate limit + circuit breaker → POST Meta → persiste + publica status no tópico.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Passos 11, 14 · Genesis</span>
+            <h3>Reflexo na UI</h3>
+            <p class="desc">Status worker atualiza mensagem na conversa e contadores da campanha. Operador vê em tempo real via WebSocket.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Passos 12-13 · Meta + Polly</span>
+            <h3>Callbacks de entrega</h3>
+            <p class="desc">Meta avisa quando msg foi entregue/lida. Polly republica no mesmo tópico, Genesis atualiza os ✓✓ azuis na conversa.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
   {#if tab === 'plano'}
     <section>
       <h2>Plano de ação</h2>
@@ -388,6 +470,7 @@
 </footer>
 
 <PainelDetalhe bloco={blocoSelecionado} aberto={painelAberto} onClose={fechar} />
+<PainelCaso caso={casoSelecionado} ator={atorSelecionado} aberto={painelCasoAberto} onClose={fecharCaso} />
 
 <style>
   .container {
@@ -526,5 +609,68 @@
     text-align: center;
     color: var(--text-muted);
     font-size: 12px;
+  }
+
+  /* ===== Diagrama de atores e casos ===== */
+  .diagrama {
+    margin-top: 24px;
+    background: linear-gradient(180deg, var(--bg-card) 0%, transparent 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 32px;
+    overflow-x: auto;
+  }
+
+  .atores-linha {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px dashed var(--border);
+    position: sticky;
+    top: 100px;
+    background: var(--bg-primary);
+    z-index: 10;
+    padding-top: 4px;
+  }
+  .ator-coluna-cabecalho {
+    display: flex;
+    justify-content: center;
+  }
+  .ator-coluna-cabecalho :global(.boneco) {
+    min-width: 180px;
+  }
+
+  .bolas-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px 24px;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .linha-caso {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .seta-vertical {
+    grid-row: span 1;
+    color: var(--purple);
+    font-size: 22px;
+    opacity: 0.6;
+    text-align: center;
+    line-height: 1;
+    padding: 4px 0;
+  }
+
+  @media (max-width: 900px) {
+    .atores-linha, .bolas-grid {
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      min-width: 800px;
+    }
+    .diagrama { padding: 20px; }
   }
 </style>

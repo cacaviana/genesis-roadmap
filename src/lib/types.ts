@@ -13,3 +13,20 @@ export interface Bloco {
   entrega: string[];
   observacoes?: string[];
 }
+
+export interface Ator {
+  id: string;
+  nome: string;
+  papel: string;
+  cor: string;
+}
+
+export interface Caso {
+  id: string;
+  ordem: number;
+  atorId: string;
+  nome: string;
+  passo: string;
+  oQueAcontece: string;
+  porQueImporta?: string;
+}
