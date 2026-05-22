@@ -60,28 +60,31 @@ export const execucao: ItemExec[] = [
   {
     bloco: 'Bloco 5',
     titulo: 'messaging-service sandbox completo',
-    estado: 'bloqueado',
+    estado: 'feito',
     detalhes: [
-      'Fork criado: github.com/cacaviana/messaging-service',
-      'Branch `CU-sandbox-completo` com:',
+      '✅ https://messaging-service-sandbox.azurewebsites.net/health → 200 OK',
+      'Fork: github.com/cacaviana/messaging-service (CU-sandbox-completo)',
+      'Código novo:',
       '  + integrations/service_bus.py (wrapper)',
       '  + integrations/event_publisher.py (publica status + inbound)',
-      '  + workers/send_worker.py (consome messaging.send)',
+      '  + workers/send_worker.py (consome messaging.send + idempotency)',
       '  + routers/webhooks_meta.py (recebe webhook Meta + republica)',
-      'Workflow GHA deploy-sandbox.yml',
-      '⚠️ BLOQUEADO: deploy do App Service não consegue extrair antenv',
-      'Conflito Oryx ↔ antenv pré-built. 4 tentativas sem sucesso hoje.',
-      'Workaround: usar app-messaging-service-accp da Polly (já rodando)',
+      'send_worker CONECTADO em messaging.send queue (logs confirmam)',
+      'Receita Oryx (perdi 2h): SCM_DO_BUILD=true + source-only no zip',
     ],
   },
   {
     bloco: 'Bloco 6',
     titulo: 'Smoke test E2E',
-    estado: 'bloqueado',
+    estado: 'feito',
     detalhes: [
-      'Bloqueado pelo Bloco 5 (sandbox não rodando)',
-      'Alternativa pendente: usar app-messaging-service-accp da Polly via HTTP',
-      'Mas a versão dela não tem os workers SB ainda',
+      '✅ Msg publicada em messaging.send (idempotency_key=smoke-1779485605)',
+      '✅ send_worker consumiu da queue',
+      '✅ Pipeline executou (factory → twilio_sender)',
+      '✅ Provider chamado (Twilio rejeitou 401 = esperado, magic number)',
+      '✅ Registro persistido no DB sandbox (id=09745648-...)',
+      'Arquitetura E2E VALIDADA — funciona ponta a ponta',
+      'Bug menor encontrado e corrigido (DetachedInstanceError fix)',
     ],
   },
   {
@@ -189,13 +192,8 @@ export interface Pendencia {
 export const pendencias: Pendencia[] = [
   {
     prioridade: 'alta',
-    acao: 'Resolver deploy do messaging-service-sandbox',
-    contexto: 'Conflito Oryx + antenv. 4 abordagens tentadas. Sugestões: BUILD_FLAGS=UseExpressBuild, Dockerfile custom, ou WebSSH manual.',
-  },
-  {
-    prioridade: 'alta',
     acao: 'Conversar com Polly sobre as mudanças no fork',
-    contexto: 'Fork cacaviana/messaging-service tem código novo (SB worker + publishers + webhook receiver). Quando ela aprovar, mergear no repo dela.',
+    contexto: 'Fork cacaviana/messaging-service tem código novo (SB worker + publishers + webhook receiver) PROVADO em sandbox. Quando ela aprovar, mergear no repo dela.',
   },
   {
     prioridade: 'alta',
