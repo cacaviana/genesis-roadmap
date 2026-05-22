@@ -9,8 +9,9 @@
   import { atores, casos } from './lib/fluxo';
   import { propriedades, naming, estadoGenesis } from './lib/serviceBus';
   import { quemFazOQue, antipadroes, estadosMsg, oQueGenesisGuarda } from './lib/bancoFila';
+  import { execucao, recursosProvisionados, prs, pendencias } from './lib/execucao';
 
-  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas';
+  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao';
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
@@ -70,6 +71,7 @@
       <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
       <button class:ativo={tab === 'banco'} onclick={() => tab = 'banco'}>Banco × Fila × DLQ</button>
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
+      <button class:ativo={tab === 'execucao'} onclick={() => tab = 'execucao'}>✅ Execução</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
   </div>
@@ -1057,6 +1059,130 @@ except Exception as e:
             <span class="tag">Depois</span>
             <h3>4. Fase 3 só quando estável</h3>
             <p class="desc">Migra todos os tenants. Remove MetaAPI do Genesis. Cordão cortado.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'execucao'}
+    <section>
+      <h2>✅ Execução — o que foi feito</h2>
+      <p class="bloco-intro">
+        Status da migração em <strong>2026-05-22</strong>. Tudo abaixo foi executado nesta sessão. Recursos Azure provisionados, branches criadas, PRs abertos, código em sandbox.
+      </p>
+
+      <div class="grupo">
+        <h4>1 · Status por bloco</h4>
+        <div class="grid-2">
+          {#each execucao as item}
+            <div class="bloco bloco--{item.estado === 'feito' ? 'ok' : item.estado === 'em-andamento' ? 'warn' : item.estado === 'bloqueado' ? 'crit' : 'info'}" style="cursor: default;">
+              <span class="tag">{item.bloco}</span>
+              <h3>{item.titulo}</h3>
+              <p class="desc" style="margin-top: 6px;">
+                {#if item.estado === 'feito'}<span class="chip chip--ok">✅ feito</span>
+                {:else if item.estado === 'em-andamento'}<span class="chip chip--warn">⏳ em andamento</span>
+                {:else if item.estado === 'bloqueado'}<span class="chip chip--crit">🚫 bloqueado</span>
+                {:else}<span class="chip">📋 pendente</span>
+                {/if}
+              </p>
+              <ul style="margin-top: 10px; padding-left: 18px; font-size: 12px; color: var(--text-secondary);">
+                {#each item.detalhes as d}
+                  <li style="margin-bottom: 4px;">{d}</li>
+                {/each}
+              </ul>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>2 · Recursos Azure provisionados</h4>
+        <table class="tabela-donos">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Tipo</th>
+              <th>Resource Group / Plan</th>
+              <th class="centro">$ /mês</th>
+              <th>Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each recursosProvisionados as r}
+              <tr>
+                <td><code style="font-size: 12px;">{r.nome}</code></td>
+                <td style="font-size: 13px;">{r.tipo}</td>
+                <td style="font-size: 12px; color: var(--text-secondary);">{r.rg}</td>
+                <td class="centro" style="font-size: 12px;">{r.custoMes ?? '—'}</td>
+                <td style="font-size: 12px; color: var(--text-secondary);">{r.notas}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grupo">
+        <h4>3 · Pull Requests abertos / mergeados</h4>
+        <div class="grid-2">
+          {#each prs as pr}
+            <div class="bloco" style="cursor: default;">
+              <span class="tag">PR #{pr.num} — {pr.repo}</span>
+              <h3>{pr.titulo}</h3>
+              <p class="desc" style="margin-top: 8px;">
+                <strong style="color: var(--text-primary);">Estado:</strong> {pr.estado}<br>
+                <code style="font-size: 11px;">{pr.head}</code> → <code style="font-size: 11px;">{pr.base}</code>
+              </p>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>4 · Pendências pra próxima sessão</h4>
+        <div class="grid-2">
+          {#each pendencias as p}
+            <div class="bloco bloco--{p.prioridade === 'alta' ? 'crit' : p.prioridade === 'media' ? 'warn' : 'info'}" style="cursor: default;">
+              <span class="tag">Prioridade {p.prioridade}</span>
+              <h3>{p.acao}</h3>
+              <p class="desc" style="margin-top: 6px;">{p.contexto}</p>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>5 · Resumo numérico</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Infra Azure</span>
+            <h3 style="font-size: 28px; color: var(--purple);">7</h3>
+            <p class="desc">novos recursos provisionados (App Services + DB + filas/tópicos)</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Código</span>
+            <h3 style="font-size: 28px; color: var(--purple);">~1000</h3>
+            <p class="desc">linhas de Python em 9 arquivos novos (Genesis + messaging-service fork)</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">PRs</span>
+            <h3 style="font-size: 28px; color: var(--purple);">2</h3>
+            <p class="desc">PR #10 mergeado · PR #11 aberto</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Branches</span>
+            <h3 style="font-size: 28px; color: var(--purple);">3</h3>
+            <p class="desc">Genesis (Fase 0 + Fase 2 + plano) · messaging-service fork</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Risco em PROD</span>
+            <h3 style="font-size: 28px; color: var(--ok);">Baixo</h3>
+            <p class="desc">Tudo reversível. Flags Fase 2 OFF. Workers separados mas com env var pendente.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Custo /mês</span>
+            <h3 style="font-size: 28px; color: var(--purple);">~$31</h3>
+            <p class="desc">Sandbox extra (App Services + DB). Pode pausar quando validar.</p>
           </div>
         </div>
       </div>
