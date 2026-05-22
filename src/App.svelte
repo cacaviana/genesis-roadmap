@@ -8,8 +8,9 @@
   import { blocosHoje, blocosFuturo, fasesPlano, ferramentas } from './lib/blocos';
   import { atores, casos } from './lib/fluxo';
   import { propriedades, naming, estadoGenesis } from './lib/serviceBus';
+  import { quemFazOQue, antipadroes, estadosMsg, oQueGenesisGuarda } from './lib/bancoFila';
 
-  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'plano' | 'ferramentas';
+  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas';
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
@@ -67,6 +68,7 @@
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
       <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
       <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
+      <button class:ativo={tab === 'banco'} onclick={() => tab = 'banco'}>Banco × Fila × DLQ</button>
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
@@ -704,6 +706,317 @@
     </section>
   {/if}
 
+  {#if tab === 'banco'}
+    <section>
+      <h2>Banco × Fila × DLQ</h2>
+      <p class="bloco-intro">
+        Três conceitos que os devs misturam. Banco guarda <strong>estado</strong>, fila guarda <strong>trabalho a fazer</strong>, e DLQ é <strong>lugar onde mensagens falhadas vão parar</strong>. Bonus: deadlock SQL é coisa completamente diferente de DLQ — só o nome parece. Tudo explicado abaixo.
+      </p>
+
+      <!-- 1. Banco vs Fila -->
+      <div class="grupo">
+        <h4>1 · Banco vs Fila — papéis diferentes</h4>
+        <div class="vs-grid">
+          <div class="vs-coluna vs-queue">
+            <div class="vs-icone">🗄️</div>
+            <h3>BANCO</h3>
+            <p class="vs-tagline">"Qual o ESTADO atual de tudo?"</p>
+            <ul class="vs-lista">
+              <li>Persistente — sobrevive a deploy, reboot, ano</li>
+              <li>Queryable: <code>SELECT WHERE...</code></li>
+              <li>UI lê pra mostrar status, contadores, listas</li>
+              <li>Auditoria, relatório, BI</li>
+              <li>Latência maior (mas mais flexível)</li>
+            </ul>
+            <p style="margin-top: 12px; font-size: 13px; color: var(--text-muted);">Ex: tabelas <code>campanhas</code>, <code>mensagens</code>, <code>contatos</code></p>
+          </div>
+
+          <div class="vs-divisor"><div class="vs-vs">≠</div></div>
+
+          <div class="vs-coluna vs-topic">
+            <div class="vs-icone">📬</div>
+            <h3>FILA / TÓPICO</h3>
+            <p class="vs-tagline">"Qual o próximo TRABALHO a fazer?"</p>
+            <ul class="vs-lista">
+              <li>Transitório — msg some quando consumida</li>
+              <li>NÃO é queryable — só publish/consume</li>
+              <li>Coordena trabalho entre componentes</li>
+              <li>Worker pega 1 msg = 1 unidade de trabalho</li>
+              <li>Latência baixa, throughput alto</li>
+            </ul>
+            <p style="margin-top: 12px; font-size: 13px; color: var(--text-muted);">Ex: <code>genesis-campanhas</code>, <code>messaging.send</code></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Quem responde o quê -->
+      <div class="grupo">
+        <h4>2 · Quem responde o quê (regra de ouro)</h4>
+        <table class="tabela-donos">
+          <thead>
+            <tr>
+              <th>Pergunta</th>
+              <th class="centro">Onde</th>
+              <th>Por quê</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each quemFazOQue as q}
+              <tr>
+                <td>{q.pergunta}</td>
+                <td class="centro">
+                  {#if q.resposta === 'banco'}
+                    <span class="chip chip--ok">🗄️ BANCO</span>
+                  {:else if q.resposta === 'fila'}
+                    <span class="chip">📬 FILA</span>
+                  {:else}
+                    <span class="chip chip--warn">⚖️ AMBOS</span>
+                  {/if}
+                </td>
+                <td style="font-size: 13px; color: var(--text-secondary);">{q.porQue}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3. O que o Genesis guarda hoje -->
+      <div class="grupo">
+        <h4>3 · O que o Genesis guarda no banco hoje</h4>
+        <p style="margin-bottom: 16px;">4 tabelas-chave do schema <code>genesis</code>. Cada UPDATE/INSERT abaixo é o Henrique escrevendo estado conforme o fluxo de campanha rola.</p>
+
+        <div class="grid-2">
+          {#each oQueGenesisGuarda as r}
+            <div class="bloco bloco--info" style="cursor: default;">
+              <span class="tag">Tabela</span>
+              <h3 style="font-family: var(--font-mono); font-size: 15px;">{r.tabela}</h3>
+              <p class="desc" style="margin-top: 6px;">{r.oQue}</p>
+              <div class="secao-mini">
+                <strong style="color: var(--text-primary); font-size: 12px;">VOLUME</strong>
+                <p class="desc" style="font-size: 12px; margin-top: 2px;">{r.exemploLinhas}</p>
+              </div>
+              <div class="secao-mini">
+                <strong style="color: var(--text-primary); font-size: 12px;">QUANDO ESCREVE</strong>
+                <p class="desc" style="font-size: 12px; margin-top: 2px;">{r.quandoEscreve}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- 4. Coreografia em um disparo -->
+      <div class="grupo">
+        <h4>4 · A coreografia em um disparo (banco + fila andando juntos)</h4>
+        <p style="margin-bottom: 16px;">Sequência real do que acontece quando operador clica "Disparar". Note: <strong>cada passo escreve no LUGAR CERTO</strong> — fila pra trabalho, banco pra estado.</p>
+
+        <div class="coreografia">
+          <div class="coreo-passo">
+            <div class="coreo-num">1</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-banco">🗄️ BANCO</div>
+              <p><code>UPDATE campanhas SET status='na_fila' WHERE id=X</code></p>
+              <small>Porque a UI precisa mostrar "esperando worker pegar"</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">2</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-fila">📬 FILA</div>
+              <p><code>publish &#123; campanha_id, tenant_id &#125; → genesis-campanhas</code></p>
+              <small>Porque é TRABALHO a fazer. Worker vai consumir.</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">3</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-banco">🗄️ BANCO</div>
+              <p><code>UPDATE campanhas SET status='enviando', iniciado_em=NOW()</code></p>
+              <small>Worker pegou e tá processando. UI mostra "0/1000 disparadas"</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">4</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-banco">🗄️ BANCO</div>
+              <p><code>UPDATE destinatarios SET status='enviado', wamid=...</code> (por destinatário)</p>
+              <small>Estado por contato. UI mostra "487/1000"</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">5</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-banco">🗄️ BANCO</div>
+              <p><code>INSERT INTO mensagens (direcao='saida', wamid, conteudo, ...)</code></p>
+              <small>Histórico permanente. Aparece na conversa do contato.</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">6</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-fila">📬 FILA</div>
+              <p><code>complete_message(msg)</code></p>
+              <small>"Trabalho terminado, broker pode deletar."</small>
+            </div>
+          </div>
+          <div class="coreo-passo">
+            <div class="coreo-num">7</div>
+            <div class="coreo-corpo">
+              <div class="coreo-onde coreo-banco">🗄️ BANCO</div>
+              <p><code>UPDATE campanhas SET status='concluida', concluido_em=NOW()</code></p>
+              <small>Estado final pra UI mostrar "✅ Concluída".</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Antipadroes -->
+      <div class="grupo">
+        <h4>5 · Antipadrões — não faça isso</h4>
+        <div class="grid-2">
+          {#each antipadroes as ap}
+            <div class="bloco bloco--crit" style="cursor: default;">
+              <span class="tag">❌ Antipadrão</span>
+              <h3>{ap.nome}</h3>
+              <p class="desc" style="margin-top: 8px;">{ap.oQueE}</p>
+              <div class="secao-mini">
+                <strong style="color: var(--crit); font-size: 12px;">POR QUE RUIM</strong>
+                <p class="desc" style="font-size: 12px; margin-top: 2px;">{ap.porQueRuim}</p>
+              </div>
+              <div class="secao-mini">
+                <strong style="color: var(--ok); font-size: 12px;">FORMA CORRETA</strong>
+                <p class="desc" style="font-size: 12px; margin-top: 2px;">{ap.ondeFazerCerto}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- 6. DLQ — o conceito que falta -->
+      <div class="grupo">
+        <h4>6 · DLQ — Dead-Letter Queue (o conceito que falta)</h4>
+        <p style="margin-bottom: 16px;">
+          DLQ é uma <strong>sub-fila automática</strong> do Service Bus. Quando uma mensagem "envenenada" (que sempre falha) é tentada N vezes, o broker move ela pra DLQ <strong>sozinho</strong>. Você vai lá investigar depois — não no banco, na própria DLQ.
+        </p>
+
+        <div class="grid-2">
+          <div>
+            <h4 style="margin-bottom: 12px;">Ciclo de vida de uma msg</h4>
+            <div class="estados-vert">
+              {#each estadosMsg as estado}
+                <div class="estado-vert estado-vert--{estado.cor}">
+                  <div class="estado-vert-nome">{estado.nome}</div>
+                  <div class="estado-vert-desc">{estado.oQueAcontece}</div>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <div>
+            <h4 style="margin-bottom: 12px;">O que o Henrique faz hoje</h4>
+            <div class="bloco bloco--crit" style="cursor: default; margin-bottom: 16px;">
+              <span class="tag">❌ Errado</span>
+              <h3>complete_message sempre, até em erro</h3>
+              <pre class="payload-mini" data-tipo="json">{`try:
+  ...processa...
+  await receiver.complete_message(msg)
+except Exception as e:
+  logger.error(e)
+  await receiver.complete_message(msg)  # BUG!`}</pre>
+              <p class="desc" style="margin-top: 10px;">
+                Msg some pra sempre. Após 1 falha, DLQ nunca recebe. Bug "envenenado" não deixa rastro. <strong>DLQ está vazia o tempo todo no Genesis.</strong>
+              </p>
+            </div>
+
+            <div class="bloco bloco--ok" style="cursor: default;">
+              <span class="tag">✅ Certo</span>
+              <h3>Diferenciar erro esperado vs inesperado</h3>
+              <pre class="payload-mini" data-tipo="json">{`try:
+  ...processa...
+  await receiver.complete_message(msg)
+except ErroDeNegocio as e:
+  # template invalido, contato sem fone, etc
+  salvar_falha_no_banco(e)
+  await receiver.complete_message(msg)
+except Exception as e:
+  # banco offline, exception inesperada
+  await receiver.abandon_message(msg)
+  # → broker retenta. Após 10x, DLQ automatico.`}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Deadlock != DLQ -->
+      <div class="grupo">
+        <h4>7 · Deadlock ≠ DLQ (não confundir!)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">📬 Service Bus</span>
+            <h3>DLQ (Dead-Letter Queue)</h3>
+            <p class="desc" style="margin-top: 8px;">Sub-fila pra mensagens que falharam N vezes. O broker move automaticamente. Você investiga depois.</p>
+            <p class="desc" style="margin-top: 8px;"><strong style="color: var(--text-primary);">Quando:</strong> mensagem "envenenada" que sempre dá pau.</p>
+            <p class="desc" style="margin-top: 8px;"><strong style="color: var(--text-primary);">Conserto:</strong> usar abandon_message no erro inesperado.</p>
+          </div>
+
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🗄️ SQL</span>
+            <h3>Deadlock (banco)</h3>
+            <p class="desc" style="margin-top: 8px;">2 transações esperam uma à outra pra liberar lock. Ninguém anda. SQL Server detecta e mata uma com erro 1205.</p>
+            <p class="desc" style="margin-top: 8px;"><strong style="color: var(--text-primary);">Quando:</strong> 2 workers fazendo UPDATE em ordem diferente nas mesmas linhas.</p>
+            <p class="desc" style="margin-top: 8px;"><strong style="color: var(--text-primary);">Conserto:</strong> sempre lockar recursos NA MESMA ORDEM, transações curtas, NUNCA chamar API externa segurando lock.</p>
+          </div>
+        </div>
+
+        <div class="bloco" style="cursor: default; margin-top: 16px;">
+          <span class="tag">Diferença em uma frase</span>
+          <h3>DLQ é sobre MENSAGEM falhada. Deadlock é sobre TRANSAÇÃO presa.</h3>
+          <p class="desc" style="margin-top: 8px;">O nome parecido confunde. Mas DLQ vive no Service Bus, deadlock vive no SQL. Causas, sintomas e soluções totalmente diferentes.</p>
+        </div>
+      </div>
+
+      <!-- 8. Padrões de transação -->
+      <div class="grupo">
+        <h4>8 · Regras de ouro de transação SQL</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Faça</span>
+            <h3>Transações curtas</h3>
+            <p class="desc">BEGIN → UPDATE → COMMIT em milissegundos. Quanto menos tempo o lock fica aberto, menor a chance de deadlock.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Faça</span>
+            <h3>Commit em batches grandes</h3>
+            <p class="desc">Loop de 1000 UPDATEs? Commita a cada 50-100. Genesis faz a cada 10 hoje — pode subir pra 50.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Faça</span>
+            <h3>Lockar SEMPRE na mesma ordem</h3>
+            <p class="desc">Sempre UPDATE destinatario ANTES de UPDATE campanha (ou vice-versa, escolha 1). Workers paralelos não criam deadlock.</p>
+          </div>
+          <div class="bloco bloco--crit" style="cursor: default;">
+            <span class="tag">❌ NÃO faça</span>
+            <h3>Chamar API externa dentro de transação</h3>
+            <p class="desc">BEGIN → SELECT FOR UPDATE → <strong>await meta.send()</strong> → UPDATE → COMMIT.
+              <br><br>Esse <code>await</code> segura lock por segundos enquanto espera HTTP. Outros workers travam. Deadlock garantido em escala.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. TL;DR -->
+      <div class="grupo">
+        <h4>9 · TL;DR pros devs (6 frases)</h4>
+        <ol class="tldr">
+          <li><strong>Banco = ESTADO</strong> (queryable, persistente, mostra na UI). <strong>Fila = TRABALHO</strong> (transitório, coordena workers).</li>
+          <li><strong>1 fonte de verdade por dado.</strong> Se um número é importante, ele mora num lugar só — geralmente o banco.</li>
+          <li><strong>Coreografia certa:</strong> fila carrega ID e tipo, worker faz UPDATE no banco em cada transição importante pra UI.</li>
+          <li><strong>DLQ é sub-fila automática</strong> do Service Bus. Msg que falha N vezes vai pra lá sozinha. Hoje no Genesis nunca chega porque o worker sempre dá complete.</li>
+          <li><strong>Conserto da DLQ:</strong> <code>complete</code> só em sucesso ou erro de negócio esperado. <code>abandon</code> em exception inesperada.</li>
+          <li><strong>Deadlock ≠ DLQ.</strong> Deadlock é transações SQL presas (erro 1205). DLQ é mensagem falhada no broker. Nomes parecem, problemas e soluções totalmente diferentes.</li>
+        </ol>
+      </div>
+    </section>
+  {/if}
+
   {#if tab === 'plano'}
     <section>
       <h2>Plano de ação</h2>
@@ -1215,5 +1528,100 @@
     .anatomia { grid-template-columns: 1fr; }
     .vs-grid { grid-template-columns: 1fr; }
     .vs-divisor { padding: 12px 0; }
+  }
+
+  /* ===== Coreografia ===== */
+  .coreografia {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .coreo-passo {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 18px;
+  }
+  .coreo-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--purple);
+    color: white;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-purple);
+  }
+  .coreo-corpo { flex: 1; }
+  .coreo-onde {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    margin-bottom: 6px;
+  }
+  .coreo-banco {
+    background: rgba(96, 165, 250, 0.10);
+    color: var(--info);
+    border: 1px solid rgba(96, 165, 250, 0.30);
+  }
+  .coreo-fila {
+    background: var(--purple-soft);
+    color: var(--purple);
+    border: 1px solid var(--border-purple);
+  }
+  .coreo-corpo p { color: var(--text-primary); font-size: 13px; margin: 0; }
+  .coreo-corpo code { font-size: 12px; }
+  .coreo-corpo small {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  /* ===== Estados vertical ===== */
+  .estados-vert {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .estado-vert {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: var(--r);
+    padding: 12px 16px;
+  }
+  .estado-vert--ok   { border-left-color: var(--ok); }
+  .estado-vert--info { border-left-color: var(--info); }
+  .estado-vert--warn { border-left-color: var(--warn); }
+  .estado-vert--crit { border-left-color: var(--crit); }
+  .estado-vert-nome {
+    font-weight: 700;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .estado-vert-desc {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  /* ===== Seções mini dentro de bloco ===== */
+  .secao-mini {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
   }
 </style>
