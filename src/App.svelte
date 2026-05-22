@@ -7,8 +7,9 @@
   import type { Bloco as BlocoType, Caso, Ator } from './lib/types';
   import { blocosHoje, blocosFuturo, fasesPlano, ferramentas } from './lib/blocos';
   import { atores, casos } from './lib/fluxo';
+  import { propriedades, naming, estadoGenesis } from './lib/serviceBus';
 
-  type Tab = 'hoje' | 'futuro' | 'acao' | 'plano' | 'ferramentas';
+  type Tab = 'hoje' | 'futuro' | 'acao' | 'sb' | 'plano' | 'ferramentas';
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
@@ -65,6 +66,7 @@
       <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como é hoje</button>
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
       <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
+      <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
@@ -382,6 +384,326 @@
     </section>
   {/if}
 
+  {#if tab === 'sb'}
+    <section>
+      <h2>Service Bus 101</h2>
+      <p class="bloco-intro">
+        Referência rápida pra quem precisa entender o Azure Service Bus sem ler 300 páginas de docs. Tudo em uma página: o que é, como é organizado, como funciona uma mensagem, queue vs topic, ciclo de vida e nomenclatura. <strong>Compartilhe com os devs.</strong>
+      </p>
+
+      <!-- 1. O que é -->
+      <div class="grupo">
+        <h4>1 · O que é, em uma frase</h4>
+        <div class="bloco bloco--purple" style="cursor: default; max-width: 800px;">
+          <span class="tag">Definição</span>
+          <h3 style="font-size: 18px;">Carteiro gerenciado pela Microsoft.</h3>
+          <p class="desc" style="font-size: 14px; margin-top: 8px;">
+            Pega mensagens de um app e entrega em outro, com <strong>garantia de não perder</strong> mesmo se servidor cair.
+            Você nunca vê o servidor — é PaaS. Só usa o endpoint que a Microsoft te dá.
+          </p>
+        </div>
+      </div>
+
+      <!-- 2. Cluster -->
+      <div class="grupo">
+        <h4>2 · O que tem por trás (o cluster)</h4>
+        <div class="grid-2">
+          <div class="bloco" style="cursor: default;">
+            <span class="tag">Cluster</span>
+            <h3>Vários servidores como se fossem um</h3>
+            <p class="desc">Em vez de 1 máquina (que pode morrer), são N servidores físicos num datacenter Microsoft. Se um cai, outro assume. Você não controla nem vê — Microsoft cuida.</p>
+          </div>
+          <div class="bloco" style="cursor: default;">
+            <span class="tag">Replicação 3×</span>
+            <h3>Mensagem gravada em 3 lugares antes de OK</h3>
+            <p class="desc">Toda msg que você manda é gravada em 3 réplicas (3 servidores do cluster) ANTES do broker te confirmar. Se 1 disco queima, 2 cópias ainda existem.</p>
+          </div>
+          <div class="bloco" style="cursor: default;">
+            <span class="tag">Analogia</span>
+            <h3>🍽️ Restaurante com 4 garçons</h3>
+            <p class="desc">1 garçom sozinho atende 5 mesas, se passa mal todos ficam sem atendimento. 4 garçons (cluster): se 1 sai, outros cobrem. Em pico, dividem carga.</p>
+          </div>
+          <div class="bloco" style="cursor: default;">
+            <span class="tag">Você nunca vê</span>
+            <h3>É PaaS, abstração total</h3>
+            <p class="desc">Você não loga em servidor nenhum. Só interage com o endpoint <code>genesisitvalley.servicebus.windows.net</code> via SDK ou REST.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Hierarquia -->
+      <div class="grupo">
+        <h4>3 · Hierarquia (de fora pra dentro)</h4>
+        <p style="margin-bottom: 16px;">São 5 camadas de containers aninhados. Você cria namespace no Azure Portal, depois cria queues/topics dentro dele.</p>
+
+        <div class="hierarquia">
+          <div class="camada camada-1">
+            <div class="camada-label">🏢 NAMESPACE</div>
+            <p class="camada-desc"><code>genesisitvalley.servicebus.windows.net</code> — sua "instância" do SB. O endpoint público. Tem auth, config de tier e quotas.</p>
+
+            <div class="camada camada-2">
+              <div class="camada-label">📦 QUEUE</div>
+              <p class="camada-desc"><strong>Ponto-a-ponto.</strong> Ex: <code>campanhas.disparo</code>. 1 msg = 1 consumer. Quando consome, msg some.</p>
+              <div class="camada camada-3">
+                <div class="camada-label">✉️ MESSAGE</div>
+                <p class="camada-desc">Body (até 256KB) + propriedades do sistema + properties customizadas. Detalhado na seção 4 abaixo.</p>
+              </div>
+              <div class="camada camada-3-dlq">
+                <div class="camada-label">💀 DEAD-LETTER QUEUE (DLQ)</div>
+                <p class="camada-desc">Sub-fila automática. Msgs que falharam N vezes vão pra cá, esperando investigação manual.</p>
+              </div>
+            </div>
+
+            <div class="camada camada-2">
+              <div class="camada-label">📢 TOPIC</div>
+              <p class="camada-desc"><strong>Pub/sub.</strong> Ex: <code>messaging.status</code>. Msg vai pra TODAS as subscriptions filhas. N consumers, cada um sua cópia.</p>
+              <div class="camada camada-3">
+                <div class="camada-label">🔔 SUBSCRIPTION (genesis-sub)</div>
+                <p class="camada-desc">"Fila virtual" com filtro opcional. Genesis consome daqui pra atualizar mensagem na conversa.</p>
+              </div>
+              <div class="camada camada-3">
+                <div class="camada-label">🔔 SUBSCRIPTION (bi-sub)</div>
+                <p class="camada-desc">Outra subscription do mesmo topic. BI lê daqui pra alimentar dashboard. Recebe a MESMA msg que genesis-sub recebeu.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Anatomia da mensagem -->
+      <div class="grupo">
+        <h4>4 · Anatomia de uma mensagem</h4>
+        <p style="margin-bottom: 16px;">Cada msg tem 3 partes. O Service Bus <strong>não olha dentro do body</strong> — pra ele, é blob de bytes. Body livre, contrato é entre você e o consumer.</p>
+
+        <div class="anatomia">
+          <div class="anatomia-parte">
+            <span class="tag">Parte 1 · Body</span>
+            <h3>📝 O conteúdo</h3>
+            <p class="desc">Livre — JSON, XML, texto, protobuf, base64. Você decide o formato. Limite 256KB no Standard, 100MB no Premium.</p>
+            <pre class="payload-mini" data-tipo="json">{`{
+  "tipo": "campanha_disparo",
+  "campanha_id": "4f5e-...",
+  "tenant_id": "cliente-42"
+}`}</pre>
+          </div>
+
+          <div class="anatomia-parte">
+            <span class="tag">Parte 2 · Propriedades do sistema</span>
+            <h3>📋 Headers que o broker gerencia</h3>
+            <p class="desc">10 propriedades padronizadas. Algumas o broker preenche sozinho, outras você pode setar.</p>
+            <p class="desc" style="margin-top: 8px; font-size: 13px;">Veja todas listadas abaixo, com exemplo de uso.</p>
+          </div>
+
+          <div class="anatomia-parte">
+            <span class="tag">Parte 3 · Custom Properties</span>
+            <h3>🏷️ Headers extras seus</h3>
+            <p class="desc">Você define. Útil pra filtrar em subscriptions (topic) sem abrir o body.</p>
+            <pre class="payload-mini" data-tipo="json">{`{
+  "regiao": "br-sul",
+  "prioridade": "alta",
+  "canal": "whatsapp"
+}`}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Propriedades do sistema (10 cards) -->
+      <div class="grupo">
+        <h4>5 · As 10 propriedades do sistema</h4>
+        <p style="margin-bottom: 16px;">
+          <span class="chip-mini chip-mini--auto">AUTO</span> = broker preenche sozinho. ·
+          <span class="chip-mini chip-mini--seta">VOCÊ SETA</span> = define no envio. ·
+          <span class="chip-mini chip-mini--opcional">OPCIONAL</span> = pode setar ou deixar auto.
+        </p>
+
+        <div class="grid-2">
+          {#each propriedades as prop}
+            <div class="bloco" style="cursor: default;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <h3 style="font-family: var(--font-mono); font-size: 14px;">{prop.nome}</h3>
+                <span class="chip-mini chip-mini--{prop.tag === 'auto' ? 'auto' : prop.tag === 'voce-seta' ? 'seta' : 'opcional'}">
+                  {prop.tag === 'auto' ? 'AUTO' : prop.tag === 'voce-seta' ? 'VOCÊ SETA' : 'OPCIONAL'}
+                </span>
+              </div>
+              <p class="desc" style="margin-top: 8px;">{prop.oQueE}</p>
+              <p class="desc" style="margin-top: 8px;">
+                <strong style="color: var(--text-primary);">Exemplo:</strong> <code>{prop.exemplo}</code>
+              </p>
+              <p class="desc" style="margin-top: 8px;">
+                <strong style="color: var(--text-primary);">Quando usa:</strong> {prop.quandoUsa}
+              </p>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- 6. Queue vs Topic -->
+      <div class="grupo">
+        <h4>6 · Queue vs Topic (a diferença essencial)</h4>
+
+        <div class="vs-grid">
+          <div class="vs-coluna vs-queue">
+            <div class="vs-icone">🪣</div>
+            <h3>QUEUE</h3>
+            <p class="vs-tagline">Ponto-a-ponto. 1 msg = 1 consumer.</p>
+
+            <div class="vs-fluxo">
+              <div class="vs-box">Producer</div>
+              <div class="vs-seta">→</div>
+              <div class="vs-box vs-box--purple">Queue</div>
+              <div class="vs-seta">→</div>
+              <div class="vs-box">Consumer</div>
+            </div>
+
+            <ul class="vs-lista">
+              <li>Quando consumer dá <code>complete</code>, a msg <strong>SOME</strong></li>
+              <li>Vários consumers competindo? SB entrega pra UM só (competing consumers)</li>
+              <li>Caso de uso: trabalho a ser feito ("disparar campanha")</li>
+            </ul>
+          </div>
+
+          <div class="vs-divisor">
+            <div class="vs-vs">VS</div>
+          </div>
+
+          <div class="vs-coluna vs-topic">
+            <div class="vs-icone">📢</div>
+            <h3>TOPIC</h3>
+            <p class="vs-tagline">Pub/Sub. 1 msg = N consumers.</p>
+
+            <div class="vs-fluxo vs-fluxo-topic">
+              <div class="vs-box">Producer</div>
+              <div class="vs-seta">→</div>
+              <div class="vs-box vs-box--purple">Topic</div>
+              <div class="vs-seta-multi">
+                <div>→</div>
+                <div>→</div>
+                <div>→</div>
+              </div>
+              <div class="vs-subs">
+                <div class="vs-box vs-box--small">Sub A → Consumer 1</div>
+                <div class="vs-box vs-box--small">Sub B → Consumer 2</div>
+                <div class="vs-box vs-box--small">Sub C → Consumer 3</div>
+              </div>
+            </div>
+
+            <ul class="vs-lista">
+              <li>Cada subscription recebe sua PRÓPRIA cópia da msg</li>
+              <li>Subscriptions podem ter FILTROS (só recebem se condição bate)</li>
+              <li>Caso de uso: eventos ("mensagem enviada" — Genesis + BI + alertas)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Ciclo de vida -->
+      <div class="grupo">
+        <h4>7 · Ciclo de vida de uma mensagem (peek-lock)</h4>
+        <p style="margin-bottom: 20px;">É o padrão que garante "msg não some se consumer morrer". O consumer "trava" a msg, processa, depois confirma.</p>
+
+        <div class="estados">
+          <div class="estado estado-active">
+            <div class="estado-icone">🟣</div>
+            <h3>Active</h3>
+            <p>Msg gravada e pronta. Esperando consumer pedir.</p>
+          </div>
+          <div class="estado-seta">→</div>
+          <div class="estado estado-locked">
+            <div class="estado-icone">🔒</div>
+            <h3>Locked</h3>
+            <p>Consumer pegou. Broker faz "lock" por 60s (default). Outros consumers NÃO veem.</p>
+          </div>
+          <div class="estado-seta">→</div>
+          <div class="estado-decisao">
+            <div class="estado estado-ok">
+              <div class="estado-icone">✅</div>
+              <h3>Complete</h3>
+              <p>Worker terminou OK. Broker DELETA do storage.</p>
+            </div>
+            <div class="estado estado-abandon">
+              <div class="estado-icone">↩️</div>
+              <h3>Abandon</h3>
+              <p>Worker falhou. Lock libera, msg volta pra Active. <code>delivery_count++</code></p>
+            </div>
+            <div class="estado estado-dlq">
+              <div class="estado-icone">💀</div>
+              <h3>DLQ</h3>
+              <p>delivery_count &gt; 10 → broker move pra Dead-Letter Queue automático.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bloco bloco--warn" style="cursor: default; margin-top: 24px;">
+          <span class="tag">Atenção · Genesis</span>
+          <h3>Hoje seus workers fazem <code>complete</code> SEMPRE — até em erro</h3>
+          <p class="desc">Isso desliga a DLQ na prática. Quando algo falha grave, msg some pra sempre sem investigação. <strong>Solução:</strong> em exceção, fazer <code>abandon_message()</code> — após 10 falhas vai pra DLQ pra você olhar.</p>
+        </div>
+      </div>
+
+      <!-- 8. Naming -->
+      <div class="grupo">
+        <h4>8 · Como nomear queues e topics</h4>
+        <p style="margin-bottom: 16px;">Regra: <strong>domínio.ação</strong> (ou <strong>entidade.evento</strong>). NÃO bota nome de sistema (Genesis, Phoenix). Pensa em "qualquer dev novo lê o nome e entende o que trafega".</p>
+
+        <table class="tabela-donos" style="width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 30%;">❌ Ruim</th>
+              <th style="width: 30%;">✅ Bom</th>
+              <th>Por quê</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each naming as n}
+              <tr>
+                <td><code style="color: var(--crit);">{n.ruim}</code></td>
+                <td><code style="color: var(--ok);">{n.bom}</code></td>
+                <td>{n.porQue}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 9. Estado real -->
+      <div class="grupo">
+        <h4>9 · Estado real do Service Bus do Genesis HOJE</h4>
+        <p style="margin-bottom: 16px;">
+          Dados puxados via <code>az servicebus</code> CLI. Namespace: <code>{estadoGenesis.namespace}</code> ·
+          Tier: <strong>{estadoGenesis.tier}</strong> · Region: {estadoGenesis.region}
+        </p>
+
+        <div class="grid-2">
+          {#each estadoGenesis.filas as fila}
+            <div class="bloco bloco--{fila.dlq > 0 ? 'warn' : 'ok'}" style="cursor: default;">
+              <span class="tag">{fila.tipo === 'queue' ? '🪣 QUEUE' : '📢 TOPIC'}</span>
+              <h3 style="font-family: var(--font-mono); font-size: 15px;">{fila.nome}</h3>
+              <div style="display: flex; gap: 16px; margin-top: 10px; font-size: 13px;">
+                <div><strong style="color: var(--text-primary);">Ativas:</strong> <span style="color: var(--text-secondary);">{fila.ativas}</span></div>
+                <div><strong style="color: var(--text-primary);">DLQ:</strong> <span style="color: {fila.dlq > 0 ? 'var(--warn)' : 'var(--text-secondary)'}; font-weight: {fila.dlq > 0 ? '700' : 'normal'};">{fila.dlq}</span></div>
+              </div>
+              {#if fila.observacao}
+                <p class="desc" style="margin-top: 10px; font-size: 12px; font-style: italic;">{fila.observacao}</p>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- 10. TLDR -->
+      <div class="grupo">
+        <h4>10 · TL;DR pros devs (5 frases)</h4>
+        <ol class="tldr">
+          <li><strong>Service Bus é PaaS.</strong> Você não vê servidor. Microsoft gerencia cluster + replicação 3×.</li>
+          <li><strong>Hierarquia:</strong> namespace contém queues e topics. Topics contêm subscriptions. Tudo contém mensagens.</li>
+          <li><strong>Body é livre</strong> (geralmente JSON, mas SB não liga). Propriedades do sistema são o envelope: MessageId, DeliveryCount, TTL etc.</li>
+          <li><strong>Queue = ponto-a-ponto</strong> (1:1). <strong>Topic = pub/sub</strong> (1:N). Pra eventos, sempre topic.</li>
+          <li><strong>Peek-lock</strong>: consumer pega, processa, dá complete (msg some) OU abandon (volta pra fila, incrementa delivery_count). 10 falhas → DLQ automático.</li>
+        </ol>
+      </div>
+    </section>
+  {/if}
+
   {#if tab === 'plano'}
     <section>
       <h2>Plano de ação</h2>
@@ -672,5 +994,226 @@
       min-width: 800px;
     }
     .diagrama { padding: 20px; }
+  }
+
+  /* ===== Service Bus 101 ===== */
+  .hierarquia { margin-top: 8px; }
+  .camada {
+    border-radius: var(--r);
+    padding: 18px 20px;
+    margin-top: 14px;
+    position: relative;
+  }
+  .camada-label {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .camada-desc { font-size: 13px; margin: 0; color: var(--text-secondary); }
+  .camada-1 {
+    background: rgba(168, 85, 247, 0.06);
+    border: 1px solid var(--border-purple);
+  }
+  .camada-2 {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    margin-left: 24px;
+  }
+  .camada-3 {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    margin-left: 24px;
+  }
+  .camada-3-dlq {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.30);
+    margin-left: 24px;
+    border-radius: var(--r);
+    padding: 18px 20px;
+    margin-top: 14px;
+  }
+
+  .anatomia {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .anatomia-parte {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px;
+  }
+  .anatomia-parte h3 { font-size: 16px; margin: 6px 0; }
+  .payload-mini {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    margin: 10px 0 0;
+    overflow-x: auto;
+    color: var(--text-primary);
+  }
+  .payload-mini[data-tipo="json"] { border-left: 3px solid var(--purple); }
+
+  .chip-mini {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+  .chip-mini--auto    { color: var(--info); background: rgba(96,165,250,0.10); border-color: rgba(96,165,250,0.30); }
+  .chip-mini--seta    { color: var(--purple); background: var(--purple-soft); border-color: var(--border-purple); }
+  .chip-mini--opcional{ color: var(--warn); background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.30); }
+
+  /* Queue vs Topic */
+  .vs-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .vs-coluna {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 24px;
+    text-align: center;
+  }
+  .vs-queue { border-color: var(--info); }
+  .vs-topic { border-color: var(--purple); }
+  .vs-icone { font-size: 42px; margin-bottom: 8px; }
+  .vs-tagline {
+    color: var(--text-secondary);
+    margin: 6px 0 18px;
+    font-size: 14px;
+  }
+  .vs-fluxo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .vs-fluxo-topic {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .vs-box {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .vs-box--purple { background: var(--purple-soft); border-color: var(--border-purple); color: var(--purple); }
+  .vs-box--small { font-size: 11px; padding: 6px 10px; }
+  .vs-seta { color: var(--purple); font-size: 16px; }
+  .vs-seta-multi { display: flex; flex-direction: column; gap: 4px; color: var(--purple); }
+  .vs-subs { display: flex; flex-direction: column; gap: 4px; }
+  .vs-lista {
+    text-align: left;
+    padding-left: 18px;
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .vs-lista li { margin-bottom: 6px; }
+  .vs-divisor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .vs-vs {
+    background: var(--purple);
+    color: white;
+    font-weight: 800;
+    font-size: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-purple);
+  }
+
+  /* Estados */
+  .estados {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .estado {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px 16px;
+    text-align: center;
+    min-width: 180px;
+    flex: 1;
+  }
+  .estado h3 { font-size: 15px; margin: 8px 0; }
+  .estado p { font-size: 12px; color: var(--text-secondary); margin: 0; }
+  .estado-icone { font-size: 28px; }
+  .estado-active  { border-color: var(--border-purple); }
+  .estado-locked  { border-color: var(--warn); }
+  .estado-ok      { border-color: var(--ok); }
+  .estado-abandon { border-color: var(--info); }
+  .estado-dlq     { border-color: var(--crit); }
+  .estado-seta {
+    align-self: center;
+    color: var(--purple);
+    font-size: 20px;
+    padding: 0 4px;
+  }
+  .estado-decisao {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    flex: 2;
+    min-width: 540px;
+  }
+
+  /* TL;DR */
+  .tldr {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--purple);
+    border-radius: var(--r);
+    padding: 20px 28px 20px 44px;
+    margin: 0;
+  }
+  .tldr li {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .tldr li:last-child { margin-bottom: 0; }
+  .tldr li strong { color: var(--text-primary); }
+
+  @media (max-width: 900px) {
+    .anatomia { grid-template-columns: 1fr; }
+    .vs-grid { grid-template-columns: 1fr; }
+    .vs-divisor { padding: 12px 0; }
   }
 </style>
