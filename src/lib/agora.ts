@@ -1,179 +1,124 @@
 import type { Bloco } from './types';
 
 /**
- * "Como está AGORA" — snapshot após a sessão de migração 2026-05-22.
+ * "Como está AGORA" — snapshot FINAL após sessão 2026-05-23 02:35 UTC.
  *
- * Mistura do "Hoje" (campanha_worker ainda chama Meta direto) com
- * peças da arquitetura nova já montadas (sandbox, filas/tópicos novos,
- * worker-genesis-webhooks isolado). Fase 0 ativada em PROD.
+ * Estado: Fase 3 completa em PROD oficial. messaging-service da Polly
+ * com nosso código merged. Webhook Meta apontando pro app oficial.
+ * Sandbox descontinuado.
  */
 export const blocosAgora: Bloco[] = [
   {
     id: 'fe-agora',
     nome: 'Frontend Genesis',
     tag: 'SvelteKit',
-    resumo: 'Sem mudança visível. Mesmo de sempre.',
+    resumo: 'Sem mudança visível. Operador clica disparar igual antes.',
     variante: 'ok',
     ondeMora: 'Azure App Service · `genesisfrontd`',
-    oQueFaz: 'Operador clica disparar; nada visível mudou nesta sessão.',
-    recebeDe: ['Usuário'],
-    entrega: ['HTTP POST /api/campanhas/{id}/disparar'],
+    oQueFaz: 'Interface do operador. Disparo de campanha, gestão de conversas, dashboard. Real-time via WebSocket.',
+    recebeDe: ['Usuário (operador)'],
+    entrega: ['HTTP POST /api/campanhas/{id}/disparar pro backend'],
   },
   {
     id: 'api-agora',
-    nome: 'Backend FastAPI',
-    tag: 'HTTP + 2 workers Fase 2 ATIVOS',
-    resumo: '🎯 Fase 2 ATIVADA em PROD. status_updater + inbound_processor rodando.',
+    nome: '✅ Backend FastAPI HTTP-only',
+    tag: 'Fase 2 ATIVA',
+    resumo: 'HTTP + status_updater + inbound_processor (Fase 2 ativa). Campanha e webhook isolados.',
     variante: 'ok',
-    ondeMora: 'Azure App Service · `genesisbackendd` (PROD)',
-    oQueFaz: 'HTTP + status_updater_worker (consome messaging.status) + inbound_processor_worker (consome messaging.inbound). webhook_worker e campanha_worker isolados em App Services dedicados.',
-    recebeDe: ['Frontend (HTTP)', 'Webhook Meta (continua aqui)', 'Tópicos messaging.status + messaging.inbound'],
-    entrega: ['SB filas + UPDATE mensagens.status + broadcast WS'],
-    payloadEntrada: {
-      titulo: 'Evento smoke em messaging.status (validado PROD)',
-      tipo: 'json',
-      conteudo: `{
-  "event": "message.delivered",
-  "provider_message_id": "wamid.HBgL...",
-  "to": "+15815780564",
-  ...
-}`,
-    },
-    payloadSaida: {
-      titulo: 'Log do worker PROD',
-      tipo: 'json',
-      conteudo: `2026-05-23 00:50:54 | status_updater_worker |
-  status_updater_mensagem_nao_encontrada
-  wamid=wamid.HBgL... event=message.delivered
-
-# Pipeline funcionando. Mensagem com esse wamid
-# atualizaria status='entregue' + broadcast WS`,
-    },
+    ondeMora: 'Azure App Service · `genesisbackendd` PROD',
+    oQueFaz: 'Recebe HTTP do frontend, valida, publica no Service Bus. Roda status_updater_worker (consome messaging.status) + inbound_processor_worker (consome messaging.inbound). webhook_worker e campanha_worker em App Services dedicados. MetaAPI removida dos envios.',
+    recebeDe: ['Frontend (HTTP)', 'Tópicos messaging.status + messaging.inbound'],
+    entrega: ['SB queue genesis-campanhas', 'UPDATE mensagens.status + broadcast WS'],
     observacoes: [
-      '✅ status_updater_worker ATIVO em PROD (consumindo messaging.status)',
-      '✅ inbound_processor_worker ATIVO em PROD (consumindo messaging.inbound)',
-      '✅ campanha_worker isolado em worker-genesis-campanhas',
-      '✅ webhook_worker isolado em worker-genesis-webhooks',
+      '✅ MetaAPI removida dos envios (mantida só pra sync_templates)',
+      '✅ /webhooks/whatsapp REMOVIDO (Meta aponta pro messaging-service oficial agora)',
+      '✅ Flag MESSAGING_SERVICE_ENABLED=true (CampanhaService.disparar publica em messaging.send)',
     ],
   },
   {
     id: 'worker-campanhas-agora',
-    nome: 'Worker Campanhas',
+    nome: 'Worker Campanhas (Dispatcher)',
     tag: 'App Service dedicado',
-    resumo: 'Já tinha, continua igual.',
+    resumo: 'Lê destinatários e publica em messaging.send (não chama Meta mais).',
     variante: 'ok',
     ondeMora: 'Azure App Service · `worker-genesis-campanhas`',
-    oQueFaz: 'Consome `genesis-campanhas`, chama MetaAPI direto. Será substituído pelo Dispatcher na Fase 2.',
+    oQueFaz: 'Consome `genesis-campanhas`. Para cada destinatário: renderiza variáveis + decide canal/janela + publica msg em messaging.send (via messaging_client). Polly consome no app oficial.',
     recebeDe: ['Service Bus `genesis-campanhas`'],
-    entrega: ['Meta WhatsApp Cloud API (direto)'],
+    entrega: ['Service Bus `messaging.send`'],
   },
   {
     id: 'worker-webhooks-agora',
-    nome: 'Worker Webhooks',
-    tag: '🆕 App Service dedicado',
-    resumo: 'NOVO — criado e ativado nesta sessão.',
-    variante: 'ok',
+    nome: 'Worker Webhooks (legacy, sem tráfego)',
+    tag: 'App Service dedicado',
+    resumo: 'Existe mas sem trabalho (webhook Meta vai direto pro messaging-service agora).',
+    variante: 'ghost',
     ondeMora: 'Azure App Service · `worker-genesis-webhooks`',
-    oQueFaz: 'Consome `genesis-webhooks` (msgs inbound do WhatsApp). Substitui o webhook_worker que estava dentro do backend. main_worker_webhooks.py.',
-    recebeDe: ['Service Bus `genesis-webhooks`'],
-    entrega: ['INSERT em contatos/conversas/mensagens', 'Broadcast WebSocket'],
-    observacoes: [
-      '✅ Logs confirmam: "Worker WEBHOOKS aguardando" no app dedicado',
-      'Receita aprendida: SCM_DO_BUILD=true + source-only workflow',
-    ],
+    oQueFaz: 'Existia pra consumir genesis-webhooks que era populada pelo /webhooks/whatsapp do Genesis. Esse endpoint foi REMOVIDO. Fila silenciosa. Pode desligar quando quiser (R$13/mês economia).',
+    recebeDe: ['(nada — fila vazia)'],
+    entrega: ['—'],
+    observacoes: ['Manter por enquanto pra rollback rápido se algo quebrar.'],
   },
   {
     id: 'sb-novo-agora',
     nome: 'Service Bus topology completa',
-    tag: '🆕 4 recursos novos',
-    resumo: 'Filas/tópicos da arquitetura alvo, criados mas NÃO usados em PROD ainda.',
-    variante: 'info',
+    tag: 'Genesis + ecossistema',
+    resumo: 'Toda arquitetura alvo provisionada e EM USO.',
+    variante: 'purple',
     ondeMora: 'Azure Service Bus · namespace `genesisitvalley`',
-    oQueFaz: 'campaigns.dispatch (queue) + messaging.send (queue) + messaging.status (topic + genesis-status-sub) + messaging.inbound (topic + genesis-inbound-sub). Aguardando código da Fase 2 ativar.',
-    recebeDe: ['Sandbox messaging-service (usando) · Genesis PROD (quando Fase 2 ATIVAR)'],
-    entrega: ['Workers consumidores (alguns ainda em flags OFF)'],
+    oQueFaz: 'queue messaging.send (Genesis → messaging-service ATIVA). topic messaging.status + sub genesis-status-sub (status_updater ATIVO). topic messaging.inbound + sub genesis-inbound-sub (inbound_processor ATIVO). campaigns.dispatch (criada, opcional). genesis-campanhas (legacy, em uso pelo dispatcher).',
+    recebeDe: ['Genesis backend + workers', 'messaging-service-itvalley-prod'],
+    entrega: ['Workers consumidores (de Genesis e messaging-service)'],
   },
   {
-    id: 'msg-sandbox-agora',
-    nome: 'messaging-service sandbox',
-    tag: '🆕 Sandbox paralelo (provado E2E)',
-    resumo: 'Cópia funcional pra testes. Smoke real com botão validou tudo.',
-    variante: 'purple',
-    ondeMora: 'Azure App Service · `messaging-service-sandbox`',
-    oQueFaz: 'Fork cacaviana/messaging-service rodando: send_worker consome messaging.send, publica em messaging.status, webhook receiver em /webhooks/meta/whatsapp. SMOKE REAL: enviou template teste0001 com botão pro Carlos, ele clicou, callback chegou no banco.',
-    recebeDe: ['Smoke real: publish em messaging.send → Meta API'],
-    entrega: ['Meta WhatsApp Cloud API (live)'],
+    id: 'msg-prod-agora',
+    nome: '🎉 messaging-service PROD OFICIAL',
+    tag: 'Polly · App oficial',
+    resumo: 'App PROD oficial rodando código nosso evoluído. Sandbox descontinuado.',
+    variante: 'ok',
+    ondeMora: 'Azure App Service · `messaging-service-itvalley-prod`',
+    oQueFaz: 'Deploy automático do main do ITValley-School/messaging-service. send_worker consome messaging.send. Publishers pra messaging.status + messaging.inbound. Webhook receiver /webhooks/meta/whatsapp ATIVO. Healthcheck valida creds Meta REAL (ping Graph API).',
+    recebeDe: ['SB queue messaging.send', 'Webhook Meta inbound (POST direto)'],
+    entrega: ['Meta WhatsApp Cloud API (envio)', 'SB topic messaging.status (sent/delivered/read/failed)', 'SB topic messaging.inbound (msg recebida normalizada)'],
     payloadEntrada: {
-      titulo: 'Msg de smoke test (consumida)',
+      titulo: 'Smoke real (22:33 UTC) que ChegoU pro Carlos',
       tipo: 'json',
       conteudo: `{
-  "channel": "sms",
-  "to": "+15005550006",
-  "from_app": "genesis-smoke",
-  "idempotency_key": "smoke-1779485605",
-  ...
+  "channel": "whatsapp_text",
+  "to": "+15815780564",
+  "body": "Carlos, mensagem do APP OFICIAL messaging-service-itvalley-prod (repo ITValley-School direto). Sandbox stopped. Estamos em 100% prod.",
+  "from_app": "claude-app-oficial",
+  "idempotency_key": "prod-app-oficial-..."
 }`,
     },
     payloadSaida: {
-      titulo: 'Persistido no DB do sandbox',
-      tipo: 'json',
-      conteudo: `{
-  "id": "09745648-2cd9-4c2f-8492-f01ed3c1a356",
-  "status": "failed",  // Twilio 401 = esperado com magic number
-  "provider": "twilio",
-  "erro_msg": "twilio_20003: Authentication Error"
-}`,
-    },
-    observacoes: ['Smoke test E2E: queue → worker → Twilio → DB ✓'],
-  },
-  {
-    id: 'code-fase2-agora',
-    nome: '🔥 Fase 2 ATIVADA em ACCP',
-    tag: 'Staging — provada E2E',
-    resumo: 'PR #11 mergeado. Flags ON em app-genesis-backend-accp.',
-    variante: 'purple',
-    ondeMora: 'Branch CU-fase2-messaging-service MERGEADA em accp',
-    oQueFaz: 'CampanhaService.disparar com flag MESSAGING_SERVICE_ENABLED publica em messaging.send. status_updater_worker rodando em ACCP, consumindo messaging.status.',
-    recebeDe: ['messaging.status publicações (smoke test passou)'],
-    entrega: ['Update mensagens.status + broadcast WS'],
-    payloadEntrada: {
-      titulo: 'Evento publicado em messaging.status (smoke)',
-      tipo: 'json',
-      conteudo: `{
-  "event": "message.sent",
-  "provider_message_id": "wamid.FASE2SMOKE...",
-  "to": "+5511999990000",
-  ...
-}`,
-    },
-    payloadSaida: {
-      titulo: 'Log do worker ACCP (sucesso)',
-      tipo: 'json',
-      conteudo: `INFO | status_updater_worker |
-  status_updater_mensagem_nao_encontrada
-  wamid=wamid.FASE2SMOKE1779489439
-  event=message.sent
+      titulo: 'POST type=text na Meta API',
+      tipo: 'http',
+      conteudo: `POST https://graph.facebook.com/v19.0/{phone_id}/messages
+Authorization: Bearer ...
+{
+  "messaging_product": "whatsapp",
+  "to": "+15815780564",
+  "type": "text",
+  "text": {"body": "Carlos, mensagem do APP OFICIAL..."}
+}
 
-# Comportamento certo: wamid fake = não acha
-# Com wamid real: UPDATE mensagens + broadcast WS`,
+// retorno: wamid.HBgL... + Carlos recebeu no celular ✅`,
     },
     observacoes: [
-      '✅ PR #11 MERGEADO em accp',
-      '✅ MESSAGING_SERVICE_ENABLED=true em ACCP',
-      '✅ STATUS_UPDATER_WORKER_ENABLED=true em ACCP',
-      '✅ Smoke pub→consume validou pipeline',
-      '⏳ Próximo: ativar em PROD (canary)',
+      '✅ Provado E2E com Carlos confirmando "recebi"',
+      '✅ Webhook Meta apontando pra ele (Graph API troca feita)',
+      '✅ MetaAPI removida no Genesis (sem cordão direto)',
     ],
   },
   {
     id: 'meta-agora',
-    nome: 'Meta WhatsApp',
-    tag: 'API externa',
-    resumo: 'Genesis ainda chama direto (Fase 2 muda isso).',
-    variante: 'warn',
-    ondeMora: 'Externo',
-    oQueFaz: 'Recebe POSTs do worker-genesis-campanhas e do operador (via /whatsapp/send-*). Envia webhook inbound pro Genesis (que enfileira em genesis-webhooks).',
-    recebeDe: ['Genesis (direto, hoje)'],
-    entrega: ['Webhook inbound → genesis-webhooks queue'],
+    nome: 'Meta WhatsApp Cloud API',
+    tag: 'Provider externo',
+    resumo: 'Apenas messaging-service fala com ela. Genesis desacoplado.',
+    variante: 'info',
+    ondeMora: 'Externo · graph.facebook.com',
+    oQueFaz: 'Recebe POSTs do messaging-service (texto + template). Manda webhooks de inbound + status callbacks pro messaging-service-itvalley-prod (URL configurada via Graph API hoje).',
+    recebeDe: ['messaging-service (envios)'],
+    entrega: ['Cliente WhatsApp', 'Webhook → messaging-service'],
   },
 ];

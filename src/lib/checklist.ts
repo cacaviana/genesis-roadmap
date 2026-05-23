@@ -21,24 +21,15 @@ export const checklist: ItemChecklist[] = [
   },
   {
     area: '📢 Segunda — pra equipe',
-    item: 'Mostrar pra Polly: PR cross-fork #1 (sandbox completo)',
-    estado: 'falta',
-    detalhe: 'github.com/ITValley-School/messaging-service/pull/1 — SB worker + event publisher + Meta webhook receiver + healthcheck validador. Já PROVADO E2E em PROD do Genesis. Pedir review + merge.',
-    bloqueador: 'Polly revisar e mergear',
+    item: '✅ PR cross-fork #1 + #2 já MERGEADOS no repo da Polly',
+    estado: 'feito',
+    detalhe: 'PR #1 (sandbox completo) + PR #2 (whatsapp_text) MERGEADOS em main do ITValley-School/messaging-service. App PROD messaging-service-itvalley-prod rodando.',
   },
   {
     area: '📢 Segunda — pra equipe',
-    item: 'Abrir PR cross-fork #2: canal whatsapp_text',
-    estado: 'falta',
-    detalhe: '4 alterações aditivas pequenas pra adicionar canal whatsapp_text (texto livre janela 24h). Smoke real validou: mensagem chegou pro Carlos em 22:00 UTC. Padrão IT Valley puro.',
-    bloqueador: 'Eu abro PR separado e pequeno antes de segunda',
-  },
-  {
-    area: '📢 Segunda — pra equipe',
-    item: 'Pedir Polly: criar messaging-service-prod App Service oficial',
-    estado: 'falta',
-    detalhe: 'Hoje meu fork (cacaviana/messaging-service-sandbox) está rodando em PROD com tokens reais. Quando ela criar App Service oficial messaging-service-prod, eu migro a config e desligo o sandbox.',
-    bloqueador: 'Polly criar + deploy + nova publish profile + trocar webhook Meta URL pra novo endpoint',
+    item: '✅ App PROD oficial criado (sandbox descontinuado)',
+    estado: 'feito',
+    detalhe: 'messaging-service-itvalley-prod.azurewebsites.net rodando com tokens reais Itvalley School. Smoke real 22:33 UTC. Sandbox + DB deletados.',
   },
   {
     area: '📢 Segunda — pra equipe',
@@ -56,9 +47,21 @@ export const checklist: ItemChecklist[] = [
   },
   {
     area: '📢 Segunda — pra equipe',
-    item: 'Pitch resumo de uma frase',
+    item: '💬 MENSAGEM PRA POLLY (pronta pra copiar)',
     estado: 'falta',
-    detalhe: '"Eu + Claude desligamos o cordão direto Genesis↔Meta. Webhook Meta agora chega no messaging-service, que processa, publica em tópico, e Genesis consome de lá. Canal whatsapp_text novo desbloqueia tudo. PR cross-fork #1 te espera."',
+    detalhe: '"Polly, eu + Claude evoluímos teu messaging-service esse final de semana. Genesis tá usando ele em PROD agora — texto livre + template + webhook callbacks. App messaging-service-itvalley-prod rodando. Sandbox descontinuei. Tudo no main do teu repo. Cada commit tem Co-Authored-By: Claude. Olha PR #1 e #2 já mergeados. Próximo passo TEU: multi-tenancy de provider (tabela tenant_providers) pra escalar 100-500 clientes."',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: '💬 MENSAGEM PRA HENRIQUE (pronta pra copiar)',
+    estado: 'falta',
+    detalhe: '"Henrique, Genesis ganhou 3 workers novos (status_updater + inbound_processor + persiste outbound). CampanhaService.disparar agora publica em fila messaging.send (flag MESSAGING_SERVICE_ENABLED=true em PROD). MetaAPI removida dos envios (mantida só pra sync_templates). Webhook /webhooks/whatsapp REMOVIDO do Genesis (Meta aponta pro messaging-service oficial agora). worker-genesis-webhooks novo em App Service dedicado. Roadmap visual com tudo: https://calm-moss-0e9dd3c0f.7.azurestaticapps.net"',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: '📋 Próximos passos sugeridos (não bloqueante)',
+    estado: 'falta',
+    detalhe: '1) Pedir Polly: multi-tenancy de provider (~2 semanas). 2) Failed rate custom metric. 3) Polly decide se cria branch ACCP separada partindo de main. 4) Quando Fase 2 estável 1-2 semanas, remover MetaAPI inteira (incluindo sync_templates → mover pro messaging-service). 5) Migrar Cobrança e Phoenix pra usar messaging.send.',
   },
 
 

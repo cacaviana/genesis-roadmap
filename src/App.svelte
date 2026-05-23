@@ -152,17 +152,19 @@
 
   {#if tab === 'agora'}
     <section>
-      <h2>🆕 Como está AGORA — Fase 2 ATIVA em PROD</h2>
+      <h2>🆕 Como está AGORA — Fase 3 ATIVA em PROD oficial</h2>
       <p class="bloco-intro">
-        Estado de <strong>2026-05-23 00:50 UTC</strong>. Validado E2E real (tu apertou botão, sistema capturou). Fase 0 + Fase 2 ATIVAS em PROD. Cordão direto com Meta convive com messaging-service via feature flag. <strong>Clique em qualquer bloco pra detalhes técnicos.</strong>
+        Estado FINAL de <strong>2026-05-23 02:35 UTC</strong>. Genesis ↔ Meta DESACOPLADO. App oficial <code>messaging-service-itvalley-prod</code> rodando código da Polly evoluído por Carlos + Claude. Webhook Meta apontando direto pro app oficial. Sandbox deletado. <strong>Clique em qualquer bloco pra detalhes.</strong>
       </p>
 
       <div class="grupo">
-        <h4>Caminho de saída (campanha → messaging-service → Meta) — Fase 2 ATIVA</h4>
+        <h4>Caminho de saída (campanha → messaging-service → Meta) — ATIVO</h4>
         <div class="fluxo">
           <Bloco bloco={blocosAgora[0]} onclick={abrirPainel} />
           <div class="seta">→</div>
           <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[4]} onclick={abrirPainel} />
           <div class="seta">→</div>
           <Bloco bloco={blocosAgora[2]} onclick={abrirPainel} />
           <div class="seta">→</div>
@@ -170,14 +172,14 @@
           <div class="seta">→</div>
           <Bloco bloco={blocosAgora[5]} onclick={abrirPainel} />
           <div class="seta">→</div>
-          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
+          <Bloco bloco={blocosAgora[6]} onclick={abrirPainel} />
         </div>
       </div>
 
       <div class="grupo">
-        <h4>Caminho de status (sent/delivered/read) — NOVO Fase 2</h4>
+        <h4>Caminho de status (sent/delivered/read) — ATIVO</h4>
         <div class="fluxo">
-          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
+          <Bloco bloco={blocosAgora[6]} onclick={abrirPainel} />
           <div class="seta">→</div>
           <Bloco bloco={blocosAgora[5]} onclick={abrirPainel} />
           <div class="seta">→</div>
@@ -188,66 +190,76 @@
       </div>
 
       <div class="grupo">
-        <h4>Caminho de entrada (cliente apertou o botão — validado real)</h4>
+        <h4>Caminho de entrada (cliente respondendo) — ATIVO (Fase 3 nova)</h4>
         <div class="fluxo">
-          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
+          <Bloco bloco={blocosAgora[6]} onclick={abrirPainel} />
           <div class="seta">→</div>
-          <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
+          <Bloco bloco={blocosAgora[5]} onclick={abrirPainel} />
           <div class="seta">→</div>
           <Bloco bloco={blocosAgora[4]} onclick={abrirPainel} />
           <div class="seta">→</div>
-          <Bloco bloco={blocosAgora[3]} onclick={abrirPainel} />
+          <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
         </div>
       </div>
 
       <div class="grupo">
-        <h4>O que foi validado nesta sessão em PROD</h4>
+        <h4>O que mudou nessa sessão (resumo executivo)</h4>
         <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 messaging-service oficial</span>
+            <h3>App PROD no repo da Polly</h3>
+            <p class="desc">PR #1 + PR #2 mergeados em main de ITValley-School/messaging-service. App messaging-service-itvalley-prod deployado direto. Sandbox deletado.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 Webhook Meta</span>
+            <h3>Aponta pro app oficial</h3>
+            <p class="desc">Graph API trocou callback_url pra messaging-service-itvalley-prod/webhooks/meta/whatsapp. /webhooks/whatsapp do Genesis foi REMOVIDO.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 MetaAPI cortada</span>
+            <h3>Genesis desacoplado dos envios</h3>
+            <p class="desc">whatsapp_service.py migrado pra messaging_client. Envios via messaging.send queue. MetaAPI mantida só pra sync_templates (catálogo).</p>
+          </div>
           <div class="bloco bloco--ok" style="cursor: default;">
             <span class="tag">🎯 Smoke real</span>
-            <h3>Template + botão "Bloquear Contato"</h3>
-            <p class="desc">Mensagem enviada via messaging-service-sandbox → tu apertou o botão → webhook Meta → worker-genesis-webhooks → INSERT no banco PROD com título "Bloquear Contato" + wamid.</p>
+            <h3>3 mensagens reais pro Carlos</h3>
+            <p class="desc">Template com botão (Carlos apertou) + texto livre via canal whatsapp_text + texto via app oficial. Persistido no banco PROD, wamid em todos.</p>
           </div>
           <div class="bloco bloco--ok" style="cursor: default;">
-            <span class="tag">🎯 Fase 2 PROD</span>
-            <h3>status_updater_worker rodando</h3>
-            <p class="desc">Evento `message.delivered` publicado em messaging.status → worker em genesisbackendd PROD consumiu (log: "status_updater_mensagem_nao_encontrada wamid=...").</p>
+            <span class="tag">🎯 Observabilidade</span>
+            <h3>6 alertas Azure + Logic App</h3>
+            <p class="desc">DLQ × 3, 5xx × 2, backlog. Logic App smoke-genesis-hourly. Healthcheck valida creds Meta de verdade.</p>
           </div>
           <div class="bloco bloco--ok" style="cursor: default;">
-            <span class="tag">🎯 Workers isolados</span>
-            <h3>2 App Services novos em PROD</h3>
-            <p class="desc">worker-genesis-webhooks (criado hoje) + worker-genesis-campanhas (já existia). Backend FastAPI só HTTP + 2 workers Fase 2.</p>
-          </div>
-          <div class="bloco bloco--ok" style="cursor: default;">
-            <span class="tag">🎯 Infra completa</span>
-            <h3>Service Bus topology alvo</h3>
-            <p class="desc">campaigns.dispatch + messaging.send (queues) + messaging.status + messaging.inbound (topics com subscriptions). Tudo no namespace genesisitvalley.</p>
+            <span class="tag">🎯 Canal whatsapp_text</span>
+            <h3>Texto livre janela 24h</h3>
+            <p class="desc">Novo canal no factory da Polly (4 alterações aditivas). Operador responde dentro da janela sem template HSM.</p>
           </div>
         </div>
       </div>
 
       <div class="grupo">
-        <h4>O que falta pra "Como deve ficar" plena</h4>
+        <h4>O que falta — só depende da Polly / equipe</h4>
         <div class="grid-2">
           <div class="bloco bloco--warn" style="cursor: default;">
-            <span class="tag">Fase 3 · próximo</span>
-            <h3>Apontar webhook Meta pro messaging-service</h3>
-            <p class="desc">Hoje webhook chega no Genesis. Pra Fase 3 plena, Meta tem que apontar pro messaging-service-sandbox. Requer acesso ao Meta Business Manager (precisa do App Secret).</p>
-          </div>
-          <div class="bloco bloco--warn" style="cursor: default;">
-            <span class="tag">Polly</span>
+            <span class="tag">Polly · ~2 semanas</span>
             <h3>Multi-tenancy de provider</h3>
-            <p class="desc">Hoje messaging-service tem só 1 set de creds Meta (do tenant atual). Pra 100-500 clientes, precisa tabela `tenant_providers`. Trabalho da Polly.</p>
+            <p class="desc">Tabela tenant_providers (1 WABA/Twilio/IG por cliente). Hoje creds globais. Sem isso não escala 100-500 clientes.</p>
           </div>
-          <div class="bloco bloco--ghost" style="cursor: default;">
-            <span class="tag">Limpeza</span>
-            <h3>Remover MetaAPI do Genesis</h3>
-            <p class="desc">Quando Fase 2 estável por 1-2 semanas, remover `integrations/meta_api.py` e `/webhooks/whatsapp` do Genesis. Cordão cortado.</p>
-          </div>
-          <div class="bloco bloco--ghost" style="cursor: default;">
+          <div class="bloco bloco--info" style="cursor: default;">
             <span class="tag">Fase 4 (futuro)</span>
             <h3>Multi-canal SMS + IG</h3>
-            <p class="desc">Polly implementa Twilio + IG no messaging-service. Genesis ganha seletor de canal por contato. Ecossistema multi-canal pronto.</p>
+            <p class="desc">Polly implementa Twilio + IG Graph senders. Genesis ganha seletor de canal por contato.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Limpeza · 1-2 semanas</span>
+            <h3>Remover MetaAPI inteira do Genesis</h3>
+            <p class="desc">Quando Fase 3 estável, mover sync_templates pro messaging-service e deletar integrations/meta_api.py.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Cosmético</span>
+            <h3>Failed rate custom metric</h3>
+            <p class="desc">Emit Application Insights metric por provider. Hoje só tem 5xx generic.</p>
           </div>
         </div>
       </div>
