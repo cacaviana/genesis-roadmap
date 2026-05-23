@@ -11,8 +11,12 @@
   import { quemFazOQue, antipadroes, estadosMsg, oQueGenesisGuarda } from './lib/bancoFila';
   import { execucao, recursosProvisionados, prs, pendencias } from './lib/execucao';
   import { blocosAgora } from './lib/agora';
+  import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao';
+  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist';
+
+  const stats = contarPorEstado();
+  const areas = [...new Set(checklist.map(i => i.area))];
 
   let tab = $state<Tab>('hoje');
   let blocoSelecionado = $state<BlocoType | null>(null);
@@ -74,6 +78,7 @@
       <button class:ativo={tab === 'banco'} onclick={() => tab = 'banco'}>Banco × Fila × DLQ</button>
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
       <button class:ativo={tab === 'execucao'} onclick={() => tab = 'execucao'}>✅ Execução</button>
+      <button class:ativo={tab === 'checklist'} onclick={() => tab = 'checklist'}>📋 Checklist</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
   </div>
@@ -1292,6 +1297,73 @@ except Exception as e:
           </div>
         </div>
       </div>
+    </section>
+  {/if}
+
+  {#if tab === 'checklist'}
+    <section>
+      <h2>📋 Checklist da Arquitetura — Feito vs Falta</h2>
+      <p class="bloco-intro">
+        Estado em <strong>2026-05-23 00:50 UTC</strong>. Comparação item a item entre o que o site descreve como alvo (arquitetura "Como deve ficar") e o que está rodando agora em PROD.
+      </p>
+
+      <div class="grupo">
+        <div class="grid-3">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Concluídos</span>
+            <h3 style="font-size: 36px; color: var(--ok);">{stats.feito}<span style="font-size: 16px; color: var(--text-muted);"> / {stats.total}</span></h3>
+            <p class="desc">Itens 100% ativos em PROD</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Parciais</span>
+            <h3 style="font-size: 36px; color: var(--warn);">{stats.parcial}<span style="font-size: 16px; color: var(--text-muted);"> / {stats.total}</span></h3>
+            <p class="desc">Estrutura pronta mas faltando ativação/integração</p>
+          </div>
+          <div class="bloco bloco--crit" style="cursor: default;">
+            <span class="tag">Faltam</span>
+            <h3 style="font-size: 36px; color: var(--crit);">{stats.falta}<span style="font-size: 16px; color: var(--text-muted);"> / {stats.total}</span></h3>
+            <p class="desc">Ainda não iniciado</p>
+          </div>
+        </div>
+        <div style="margin-top: 16px; text-align: center;">
+          <span style="font-size: 14px; color: var(--text-secondary);">Progresso geral:</span>
+          <span style="font-size: 28px; font-weight: 800; color: var(--purple); margin-left: 8px;">{stats.pctFeito}%</span>
+        </div>
+      </div>
+
+      {#each areas as area}
+        <div class="grupo">
+          <h4>{area}</h4>
+          <table class="tabela-donos">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="centro" style="width: 90px;">Estado</th>
+                <th>Detalhe</th>
+                <th>Bloqueador / Próximo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each checklist.filter(i => i.area === area) as item}
+                <tr>
+                  <td><strong>{item.item}</strong></td>
+                  <td class="centro">
+                    {#if item.estado === 'feito'}
+                      <span class="chip chip--ok">✅ feito</span>
+                    {:else if item.estado === 'parcial'}
+                      <span class="chip chip--warn">⏳ parcial</span>
+                    {:else}
+                      <span class="chip chip--crit">❌ falta</span>
+                    {/if}
+                  </td>
+                  <td style="font-size: 13px; color: var(--text-secondary);">{item.detalhe}</td>
+                  <td style="font-size: 12px; color: var(--text-muted); font-style: italic;">{item.bloqueador ?? '—'}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/each}
     </section>
   {/if}
 
