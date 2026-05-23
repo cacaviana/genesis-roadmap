@@ -10,6 +10,59 @@ export interface ItemChecklist {
 
 export const checklist: ItemChecklist[] = [
   // ============================================================
+  // 📢 SEGUNDA-FEIRA — APRESENTAR/PEDIR PRA EQUIPE
+  // ============================================================
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Apresentar resultado: 83% da arquitetura messaging-service ATIVA em PROD',
+    estado: 'falta',
+    detalhe: '27 itens matados em uma sessão. Genesis↔Meta cordão cortado. Webhook Meta agora chega no messaging-service. Pipeline E2E validado: template+botão + texto livre. Site roadmap atualizado em https://calm-moss-0e9dd3c0f.7.azurestaticapps.net.',
+    bloqueador: 'Reunião com Henrique + Polly',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Mostrar pra Polly: PR cross-fork #1 (sandbox completo)',
+    estado: 'falta',
+    detalhe: 'github.com/ITValley-School/messaging-service/pull/1 — SB worker + event publisher + Meta webhook receiver + healthcheck validador. Já PROVADO E2E em PROD do Genesis. Pedir review + merge.',
+    bloqueador: 'Polly revisar e mergear',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Abrir PR cross-fork #2: canal whatsapp_text',
+    estado: 'falta',
+    detalhe: '4 alterações aditivas pequenas pra adicionar canal whatsapp_text (texto livre janela 24h). Smoke real validou: mensagem chegou pro Carlos em 22:00 UTC. Padrão IT Valley puro.',
+    bloqueador: 'Eu abro PR separado e pequeno antes de segunda',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Pedir Polly: criar messaging-service-prod App Service oficial',
+    estado: 'falta',
+    detalhe: 'Hoje meu fork (cacaviana/messaging-service-sandbox) está rodando em PROD com tokens reais. Quando ela criar App Service oficial messaging-service-prod, eu migro a config e desligo o sandbox.',
+    bloqueador: 'Polly criar + deploy + nova publish profile + trocar webhook Meta URL pra novo endpoint',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Pedir Polly: implementar multi-tenancy de provider',
+    estado: 'falta',
+    detalhe: 'Tabela tenant_providers (1 WABA + 1 Twilio + 1 IG por cliente). HOJE só tem 1 set de creds globais. SEM ISSO o Genesis não escala pra 100-500 clientes. Trabalho ~2 semanas dela.',
+    bloqueador: 'Polly priorizar + estimar',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Alinhar com Henrique: Genesis código novo em PROD',
+    estado: 'falta',
+    detalhe: '3 workers novos (status_updater, inbound_processor, dispatcher via campanha_worker). MetaAPI deprecated nos envios (só sync_templates ainda usa). Feature flags ativas. CampanhaService.disparar refatorado. Ele precisa saber pra próximas mexidas.',
+    bloqueador: 'Conversa pessoal',
+  },
+  {
+    area: '📢 Segunda — pra equipe',
+    item: 'Pitch resumo de uma frase',
+    estado: 'falta',
+    detalhe: '"Eu + Claude desligamos o cordão direto Genesis↔Meta. Webhook Meta agora chega no messaging-service, que processa, publica em tópico, e Genesis consome de lá. Canal whatsapp_text novo desbloqueia tudo. PR cross-fork #1 te espera."',
+  },
+
+
+  // ============================================================
   // INFRA AZURE
   // ============================================================
   {
