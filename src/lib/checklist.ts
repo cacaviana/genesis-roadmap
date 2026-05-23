@@ -68,9 +68,8 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Service Bus',
     item: 'Topic messaging.inbound + subscription genesis-inbound-sub',
-    estado: 'parcial',
-    detalhe: 'Criado mas VAZIO. Inbound worker rodando mas sem mensagens.',
-    bloqueador: 'Webhook Meta ainda aponta pro Genesis. Trocar URL no Meta Business Manager.',
+    estado: 'feito',
+    detalhe: '✅ EM USO. Webhook Meta apontado pro messaging-service. Smoke validou POST → SB topic → Genesis worker consumindo.',
   },
 
   // ============================================================
@@ -123,8 +122,8 @@ export const checklist: ItemChecklist[] = [
     area: 'messaging-service',
     item: 'Service deployado e rodando',
     estado: 'parcial',
-    detalhe: 'Fork meu (cacaviana/messaging-service) ativo. Polly precisa mergear no repo dela.',
-    bloqueador: 'Conversa com Polly + merge no repo ITValley-School/messaging-service',
+    detalhe: '✅ PR cross-fork aberto: ITValley-School/messaging-service#1. Polly precisa revisar e mergear.',
+    bloqueador: 'Aguardando review da Polly.',
   },
   {
     area: 'messaging-service',
@@ -141,9 +140,8 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'messaging-service',
     item: 'Webhook receiver /webhooks/meta/whatsapp',
-    estado: 'parcial',
-    detalhe: 'Endpoint pronto. Mas Meta ainda não aponta pra ele.',
-    bloqueador: 'Trocar webhook URL no Meta Business Manager (precisa App Secret).',
+    estado: 'feito',
+    detalhe: '✅ ATIVO. Meta App "wflow" agora aponta callback_url pra ele. Verify_token + PlainTextResponse fix aplicados.',
   },
   {
     area: 'messaging-service',
@@ -171,30 +169,40 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Observabilidade',
     item: 'Healthcheck que valida creds Meta de verdade',
-    estado: 'falta',
-    detalhe: 'Hoje só checa se var tem valor (caso KeyVault literal nos pegou). Deveria fazer ping na Graph API.',
-    bloqueador: 'Adicionar `meta.is_token_alive()` no /health endpoint do messaging-service.',
+    estado: 'feito',
+    detalhe: '✅ /health + /health/ready com check_meta_token_alive (ping Graph API). Detecta KeyVault literal + token expirado. Cache 60s.',
   },
   {
     area: 'Observabilidade',
-    item: 'Alerta DLQ em Application Insights',
-    estado: 'falta',
-    detalhe: 'Quando uma msg vai pra DLQ, deveria alertar. Hoje passa despercebido.',
-    bloqueador: 'Configurar alert rule no Application Insights.',
+    item: 'Alerta DLQ em Azure Monitor (3 filas)',
+    estado: 'feito',
+    detalhe: '✅ alert-dlq-messaging-send + alert-dlq-genesis-campanhas + alert-dlq-genesis-webhooks. Email pra carlosvianacomp@gmail.com via Action Group ag-genesis-ops.',
   },
   {
     area: 'Observabilidade',
-    item: 'Alerta failed rate > X% por provider',
-    estado: 'falta',
-    detalhe: 'Se 50% das msgs falham por code=190 (auth), tem que disparar alerta.',
-    bloqueador: 'Métrica custom + alert rule.',
+    item: 'Alerta 5xx (PROD + sandbox)',
+    estado: 'feito',
+    detalhe: '✅ alert-prod-down (genesisbackendd) + alert-msg-service-down (messaging-service-sandbox). >5 erros 5xx em 5min.',
+  },
+  {
+    area: 'Observabilidade',
+    item: 'Alerta backlog messaging.send (worker travado)',
+    estado: 'feito',
+    detalhe: '✅ alert-messaging-send-backlog. >50 msgs ativas em 5min = worker travado ou provider down.',
+  },
+  {
+    area: 'Observabilidade',
+    item: 'Alerta failed rate > X% por provider (custom metric)',
+    estado: 'parcial',
+    detalhe: 'Tem alertas de 5xx (PROD+sandbox) + backlog. Mas custom metric "% failed por provider Meta/Twilio/IG" ainda não.',
+    bloqueador: 'Emitir custom metric via Application Insights SDK no messaging-service.',
   },
   {
     area: 'Observabilidade',
     item: 'Smoke E2E periódico em PROD',
     estado: 'falta',
-    detalhe: 'Cron que dispara msg de teste a cada hora pra detectar regressão silenciosa antes do cliente.',
-    bloqueador: 'Azure Function ou Logic App.',
+    detalhe: 'Cron Azure Function que publica msg de teste a cada hora.',
+    bloqueador: 'Criar Azure Function ou Logic App.',
   },
 
   // ============================================================
@@ -203,15 +211,14 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Meta / Externo',
     item: 'Webhook Meta apontando pro messaging-service',
-    estado: 'falta',
-    detalhe: 'Hoje aponta pro Genesis (/webhooks/whatsapp do genesisbackendd).',
-    bloqueador: 'Mudar URL no Meta Business Manager. Carlos precisa fazer (precisa App Secret).',
+    estado: 'feito',
+    detalhe: '🎉 TROCADO HOJE via Graph API. App "wflow" (508223132333066) → messaging-service-sandbox/webhooks/meta/whatsapp. App Secret no Key Vault (wflow-fb-app-secret).',
   },
   {
     area: 'Meta / Externo',
     item: 'Verify Token Meta consistente',
-    estado: 'parcial',
-    detalhe: 'WHATSAPP_VERIFY_TOKEN configurado no sandbox. Mas Meta App precisa apontar pra URL nova.',
+    estado: 'feito',
+    detalhe: '✅ Validado. PlainTextResponse fix aplicado pra Meta aceitar challenge sem aspas.',
   },
   {
     area: 'Meta / Externo',
