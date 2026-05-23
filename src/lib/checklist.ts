@@ -170,10 +170,9 @@ export const checklist: ItemChecklist[] = [
   // ============================================================
   {
     area: 'messaging-service',
-    item: 'Service deployado e rodando',
-    estado: 'parcial',
-    detalhe: '✅ PR cross-fork aberto: ITValley-School/messaging-service#1. Polly precisa revisar e mergear.',
-    bloqueador: 'Aguardando review da Polly.',
+    item: 'Service deployado e rodando em PROD oficial',
+    estado: 'feito',
+    detalhe: '🎉 PR #1 + PR #2 MERGEADOS no repo ITValley-School/messaging-service main. App oficial messaging-service-itvalley-prod no ar. Smoke real 22:33 UTC: texto livre enviado pelo Carlos. Polly segunda faz git pull + revisa.',
   },
   {
     area: 'messaging-service',
@@ -271,9 +270,9 @@ export const checklist: ItemChecklist[] = [
   },
   {
     area: 'Meta / Externo',
-    item: 'Renomear messaging-service-sandbox pra prod oficial',
-    estado: 'falta',
-    detalhe: 'Nome "sandbox" não combina com PROD. Quando Polly merge o fork, criar messaging-service-prod no repo dela.',
+    item: 'App oficial messaging-service em PROD',
+    estado: 'feito',
+    detalhe: '🎉 messaging-service-itvalley-prod criado em rg-webapps/plan-itvalley-nonprod. Deploy automático do main do ITValley-School/messaging-service. Webhook Meta apontando pra ele. Sandbox stopped (sem uso).',
   },
 
   // ============================================================
