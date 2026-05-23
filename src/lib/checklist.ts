@@ -10,6 +10,48 @@ export interface ItemChecklist {
 
 export const checklist: ItemChecklist[] = [
   // ============================================================
+  // 🔥 SESSÃO 22-23 MAIO MADRUGADA — incidente + lição aprendida
+  // ============================================================
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: '✅ Incidente PROD resolvido — genesisbackendd voltou 200',
+    estado: 'feito',
+    detalhe: 'Restart de "az webapp restart" quebrou antenv do PROD (No module named uvicorn) — base image Azure foi atualizada e antenv ficou incompatível. Solução: redeploy via gh workflow run deploy-backend.yml --ref main (Oryx builda no Azure com base image atual). PROD voltou 200, filas zeradas, messaging-service OK, Meta token válido.',
+  },
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: '🎓 LIÇÃO: restart Azure App Service Linux Python pode quebrar',
+    estado: 'feito',
+    detalhe: 'Nunca usar "az webapp restart" sozinho em PROD Linux Python. Se base image foi atualizada, antenv pré-built fica incompatível. Receita: sempre disparar workflow GitHub Actions (que faz Oryx build no Azure com base image atual). Memória salva: feedback_azure_oryx_scm_true + ref_apps_azure_genesis.',
+  },
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: '✅ Mapa Azure decifrado — PROD vs ACCP',
+    estado: 'feito',
+    detalhe: 'genesisbackendd = PROD real (190 req/7d, plan-genesis-backend, workflow deploy-backend.yml, branch main, Oryx build no Azure). app-genesis-backend-accp = STAGING (17 req/7d, plan-itvalley-nonprod, workflow deploy-backend-accp.yml, branch accp, antenv pré-built). Mesma confusão pra frontend.',
+  },
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: '✅ Carlos cadastrou petraplatform na memória do Claude',
+    estado: 'feito',
+    detalhe: 'SDK multi-tenant plug-and-play que Carlos criou. Repo /Users/carlosviana-mac/projects/petraplatform. RLS Azure SQL + JWT itvalleysecurity. Aplicação: 1 linha por rota (Depends(require_tenant)). 2 bancos: dbpetra (platform.* schema) + banco do app (RLS aplicada). CLI: init-platform + generate-rls. Memória salva: ref_petraplatform_sdk.',
+  },
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: 'Rename apps Azure pra padrão "-prod"',
+    estado: 'falta',
+    detalhe: 'Criar app-genesis-backend-prod + app-genesis-frontend-prod no plan-itvalley-nonprod. Migrar 80+ env vars. Trocar workflow + URLs em Hotmart/Voomp/MemberKit. Smoke E2E. Manter genesisbackendd 1-2 semanas como fallback. Esforço: 1-2 dias.',
+    bloqueador: 'Decisão de Carlos quando atacar. Não urgente — PROD atual está funcionando bem.',
+  },
+  {
+    area: '🔥 Madrugada 22-23/05',
+    item: 'Aplicar petraplatform (multi-tenant)',
+    estado: 'falta',
+    detalhe: 'Sequência sugerida: 1) Aplicar primeiro no messaging-service (~3 dias) — mais simples, sem dados em PROD, sem operadores logados. 2) Depois Genesis (~1 semana) — com aprendizado real. Decisão Carlos: "vamos implementar outro dia, com calma, pq eu preciso entender o que eu criei, eu gosto de documentar".',
+    bloqueador: 'Decisão Carlos sobre quando começar. Não há urgência — 1 cliente hoje (IT Valley).',
+  },
+
+  // ============================================================
   // 📢 SEGUNDA-FEIRA — APRESENTAR/PEDIR PRA EQUIPE
   // ============================================================
   {
@@ -153,7 +195,7 @@ export const checklist: ItemChecklist[] = [
     area: 'Genesis Code',
     item: 'Worker Dispatcher dedicado (substituir campanha_worker)',
     estado: 'parcial',
-    detalhe: 'campanha_worker já faz a função de Dispatcher hoje (chama CampanhaService.disparar com flag MESSAGING_SERVICE_ENABLED publicando em messaging.send). Pureza arquitetural: renomear fila pra campaigns.dispatch. Valor real = zero. Decidido SKIP.',
+    detalhe: 'Tentativa 23/05 madrugada: setar AZURE_SERVICE_BUS_QUEUE_CAMPANHAS=campaigns.dispatch no backend+worker e restartar. Restart quebrou antenv do PROD por causa de base image atualizada → reverted. campanha_worker continua consumindo genesis-campanhas (legacy). Pureza arquitetural não vale o risco hoje. Fica pra outra sessão (precisa fazer via redeploy, não restart).',
   },
   {
     area: 'Genesis Code',

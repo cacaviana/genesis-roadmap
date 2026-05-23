@@ -25,7 +25,7 @@ export const blocosAgora: Bloco[] = [
     tag: 'Fase 2 ATIVA',
     resumo: 'HTTP + status_updater + inbound_processor (Fase 2 ativa). Campanha e webhook isolados.',
     variante: 'ok',
-    ondeMora: 'Azure App Service · `genesisbackendd` PROD',
+    ondeMora: 'Azure App Service · `genesisbackendd` (PROD real, 190 req/7d) · plan-genesis-backend',
     oQueFaz: 'Recebe HTTP do frontend, valida, publica no Service Bus. Roda status_updater_worker (consome messaging.status) + inbound_processor_worker (consome messaging.inbound). webhook_worker e campanha_worker em App Services dedicados. MetaAPI removida dos envios.',
     recebeDe: ['Frontend (HTTP)', 'Tópicos messaging.status + messaging.inbound'],
     entrega: ['SB queue genesis-campanhas', 'UPDATE mensagens.status + broadcast WS'],
@@ -33,6 +33,8 @@ export const blocosAgora: Bloco[] = [
       '✅ MetaAPI removida dos envios (mantida só pra sync_templates)',
       '✅ /webhooks/whatsapp REMOVIDO (Meta aponta pro messaging-service oficial agora)',
       '✅ Flag MESSAGING_SERVICE_ENABLED=true (CampanhaService.disparar publica em messaging.send)',
+      '⚠️ Existe app PARALELO app-genesis-backend-accp (STAGING, 17 req/7d) — não confundir',
+      '🎓 23/05 madrugada: NUNCA usar "az webapp restart" sozinho — pode quebrar antenv. Sempre disparar redeploy via GH Actions.',
     ],
   },
   {
