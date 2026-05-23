@@ -147,60 +147,102 @@
 
   {#if tab === 'agora'}
     <section>
-      <h2>🆕 Como está AGORA (pós-sessão 2026-05-22)</h2>
+      <h2>🆕 Como está AGORA — Fase 2 ATIVA em PROD</h2>
       <p class="bloco-intro">
-        Snapshot do estado <strong>após a Fase 0 ativada em PROD + sandbox completo rodando</strong>. Entre "Como era hoje" e "Como deve ficar". Genesis PROD continua disparando via Meta direto (campanha_worker), mas <strong>workers já estão isolados</strong> e <strong>toda infra da arquitetura alvo está pronta</strong> (filas, tópicos, sandbox messaging-service).
+        Estado de <strong>2026-05-23 00:50 UTC</strong>. Validado E2E real (tu apertou botão, sistema capturou). Fase 0 + Fase 2 ATIVAS em PROD. Cordão direto com Meta convive com messaging-service via feature flag. <strong>Clique em qualquer bloco pra detalhes técnicos.</strong>
       </p>
 
       <div class="grupo">
-        <h4>O que mudou em PROD</h4>
-        <div class="grid-2">
-          {#each blocosAgora.filter(b => ['api-agora','worker-webhooks-agora','sb-novo-agora','code-fase2-agora'].includes(b.id)) as b}
-            <Bloco bloco={b} onclick={abrirPainel} />
-          {/each}
+        <h4>Caminho de saída (campanha → messaging-service → Meta) — Fase 2 ATIVA</h4>
+        <div class="fluxo">
+          <Bloco bloco={blocosAgora[0]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[2]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[4]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[5]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
         </div>
       </div>
 
       <div class="grupo">
-        <h4>O que continua igual em PROD</h4>
-        <div class="grid-2">
-          {#each blocosAgora.filter(b => ['fe-agora','worker-campanhas-agora','meta-agora'].includes(b.id)) as b}
-            <Bloco bloco={b} onclick={abrirPainel} />
-          {/each}
+        <h4>Caminho de status (sent/delivered/read) — NOVO Fase 2</h4>
+        <div class="fluxo">
+          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[5]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[4]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
         </div>
       </div>
 
       <div class="grupo">
-        <h4>Sandbox paralelo (não toca PROD)</h4>
-        <div class="grid-2">
-          {#each blocosAgora.filter(b => b.id === 'msg-sandbox-agora') as b}
-            <Bloco bloco={b} onclick={abrirPainel} />
-          {/each}
+        <h4>Caminho de entrada (cliente apertou o botão — validado real)</h4>
+        <div class="fluxo">
+          <Bloco bloco={blocosAgora[7]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[1]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[4]} onclick={abrirPainel} />
+          <div class="seta">→</div>
+          <Bloco bloco={blocosAgora[3]} onclick={abrirPainel} />
         </div>
       </div>
 
       <div class="grupo">
-        <h4>Caminho pra completar a arquitetura</h4>
+        <h4>O que foi validado nesta sessão em PROD</h4>
         <div class="grid-2">
-          <div class="bloco bloco--purple" style="cursor: default;">
-            <span class="tag">Próximo passo</span>
-            <h3>Ativar Fase 2 em staging (accp)</h3>
-            <p class="desc">Mergear PR #11 + ligar flags em app-genesis-backend-accp + refactor `disparar`. 1 tenant piloto valida o pipeline real.</p>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 Smoke real</span>
+            <h3>Template + botão "Bloquear Contato"</h3>
+            <p class="desc">Mensagem enviada via messaging-service-sandbox → tu apertou o botão → webhook Meta → worker-genesis-webhooks → INSERT no banco PROD com título "Bloquear Contato" + wamid.</p>
           </div>
-          <div class="bloco bloco--info" style="cursor: default;">
-            <span class="tag">Depois</span>
-            <h3>Ativar Fase 2 em PROD (canary)</h3>
-            <p class="desc">10% → 50% → 100% dos tenants. Cada etapa monitorada 24-48h. Reversível por flag.</p>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 Fase 2 PROD</span>
+            <h3>status_updater_worker rodando</h3>
+            <p class="desc">Evento `message.delivered` publicado em messaging.status → worker em genesisbackendd PROD consumiu (log: "status_updater_mensagem_nao_encontrada wamid=...").</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 Workers isolados</span>
+            <h3>2 App Services novos em PROD</h3>
+            <p class="desc">worker-genesis-webhooks (criado hoje) + worker-genesis-campanhas (já existia). Backend FastAPI só HTTP + 2 workers Fase 2.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🎯 Infra completa</span>
+            <h3>Service Bus topology alvo</h3>
+            <p class="desc">campaigns.dispatch + messaging.send (queues) + messaging.status + messaging.inbound (topics com subscriptions). Tudo no namespace genesisitvalley.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>O que falta pra "Como deve ficar" plena</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Fase 3 · próximo</span>
+            <h3>Apontar webhook Meta pro messaging-service</h3>
+            <p class="desc">Hoje webhook chega no Genesis. Pra Fase 3 plena, Meta tem que apontar pro messaging-service-sandbox. Requer acesso ao Meta Business Manager (precisa do App Secret).</p>
           </div>
           <div class="bloco bloco--warn" style="cursor: default;">
-            <span class="tag">Fase 3</span>
-            <h3>Cortar cordão Meta direto</h3>
-            <p class="desc">Webhook Meta aponta pro messaging-service. Remover MetaAPI do Genesis. Necessita PR adicional + alinhamento Polly.</p>
+            <span class="tag">Polly</span>
+            <h3>Multi-tenancy de provider</h3>
+            <p class="desc">Hoje messaging-service tem só 1 set de creds Meta (do tenant atual). Pra 100-500 clientes, precisa tabela `tenant_providers`. Trabalho da Polly.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Limpeza</span>
+            <h3>Remover MetaAPI do Genesis</h3>
+            <p class="desc">Quando Fase 2 estável por 1-2 semanas, remover `integrations/meta_api.py` e `/webhooks/whatsapp` do Genesis. Cordão cortado.</p>
           </div>
           <div class="bloco bloco--ghost" style="cursor: default;">
             <span class="tag">Fase 4 (futuro)</span>
             <h3>Multi-canal SMS + IG</h3>
-            <p class="desc">Polly implementa Twilio + IG no messaging-service. Genesis ganha seletor de canal por contato.</p>
+            <p class="desc">Polly implementa Twilio + IG no messaging-service. Genesis ganha seletor de canal por contato. Ecossistema multi-canal pronto.</p>
           </div>
         </div>
       </div>
