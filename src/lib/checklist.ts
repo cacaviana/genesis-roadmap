@@ -110,9 +110,8 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Genesis Code',
     item: 'Remover router /webhooks/whatsapp do Genesis',
-    estado: 'falta',
-    detalhe: 'Webhook Meta ainda chega aqui.',
-    bloqueador: 'Trocar URL no Meta Business Manager primeiro.',
+    estado: 'feito',
+    detalhe: '✅ REMOVIDO em 2026-05-23 01:50 UTC. Comentado em backend/routers/webhooks.py. Webhook Meta agora vai 100% pro messaging-service. /webhooks/hotmart, /voomp, /memberkit MANTIDOS.',
   },
 
   // ============================================================
@@ -200,9 +199,8 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Observabilidade',
     item: 'Smoke E2E periódico em PROD',
-    estado: 'falta',
-    detalhe: 'Cron Azure Function que publica msg de teste a cada hora.',
-    bloqueador: 'Criar Azure Function ou Logic App.',
+    estado: 'feito',
+    detalhe: '✅ Logic App smoke-genesis-hourly criada em rg-webapps. Ping /api/health (genesis) + /health/ready (messaging-service) a cada hora. 5xx dispara alert-prod-down + alert-msg-service-down já configurados.',
   },
 
   // ============================================================
