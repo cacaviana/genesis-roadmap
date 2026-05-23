@@ -69,7 +69,7 @@ export const checklist: ItemChecklist[] = [
     area: 'Service Bus',
     item: 'Topic messaging.inbound + subscription genesis-inbound-sub',
     estado: 'feito',
-    detalhe: '✅ EM USO. Webhook Meta apontado pro messaging-service. Smoke validou POST → SB topic → Genesis worker consumindo.',
+    detalhe: '✅ EM USO E VALIDADO E2E. Webhook→Sandbox→Topic→Genesis worker→INSERT no banco PROD. Smoke V5 (id=22a2eee4-...) confirmou.',
   },
 
   // ============================================================
