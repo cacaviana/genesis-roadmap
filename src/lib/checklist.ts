@@ -96,16 +96,14 @@ export const checklist: ItemChecklist[] = [
   {
     area: 'Genesis Code',
     item: 'Worker Dispatcher dedicado (substituir campanha_worker)',
-    estado: 'falta',
-    detalhe: 'Hoje campanha_worker chama disparar com if/else (flag). Padrão IT Valley quer um Dispatcher separado consumindo campaigns.dispatch.',
-    bloqueador: 'Refactor médio. Pode ficar pra depois.',
+    estado: 'parcial',
+    detalhe: 'campanha_worker já faz a função de Dispatcher hoje (chama CampanhaService.disparar com flag MESSAGING_SERVICE_ENABLED publicando em messaging.send). Pureza arquitetural: renomear fila pra campaigns.dispatch. Valor real = zero. Decidido SKIP.',
   },
   {
     area: 'Genesis Code',
-    item: 'Remover MetaAPI do Genesis',
-    estado: 'falta',
-    detalhe: 'integrations/meta_api.py ainda usado quando flag OFF.',
-    bloqueador: 'Esperar Fase 2 estável 1-2 semanas em PROD.',
+    item: 'Remover MetaAPI do Genesis (envios)',
+    estado: 'feito',
+    detalhe: '✅ whatsapp_service.py migrado: enviar_mensagem usa channel=whatsapp_text + enviar_template usa channel=whatsapp. MetaAPI mantida APENAS pra sync_templates (catálogo, não é transport).',
   },
   {
     area: 'Genesis Code',
