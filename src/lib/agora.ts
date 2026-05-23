@@ -22,28 +22,38 @@ export const blocosAgora: Bloco[] = [
   {
     id: 'api-agora',
     nome: 'Backend FastAPI',
-    tag: 'HTTP + campanha_worker',
-    resumo: 'Roda HTTP + campanha_worker (webhook_worker SAIU).',
-    variante: 'warn',
+    tag: 'HTTP + 2 workers Fase 2 ATIVOS',
+    resumo: '🎯 Fase 2 ATIVADA em PROD. status_updater + inbound_processor rodando.',
+    variante: 'ok',
     ondeMora: 'Azure App Service · `genesisbackendd` (PROD)',
-    oQueFaz: 'Continua respondendo HTTP. webhook_worker desligado via WEBHOOK_WORKER_SEPARADO=true. campanha_worker ainda dentro (sai na Fase 2).',
-    recebeDe: ['Frontend (HTTP)', 'Webhook Meta (POST /webhooks/whatsapp) — ainda aqui'],
-    entrega: ['Service Bus filas `genesis-campanhas` + `genesis-webhooks`'],
+    oQueFaz: 'HTTP + status_updater_worker (consome messaging.status) + inbound_processor_worker (consome messaging.inbound). webhook_worker e campanha_worker isolados em App Services dedicados.',
+    recebeDe: ['Frontend (HTTP)', 'Webhook Meta (continua aqui)', 'Tópicos messaging.status + messaging.inbound'],
+    entrega: ['SB filas + UPDATE mensagens.status + broadcast WS'],
     payloadEntrada: {
-      titulo: 'HTTP do frontend',
-      tipo: 'http',
-      conteudo: `POST /api/campanhas/{id}/disparar
-Authorization: Bearer ...`,
+      titulo: 'Evento smoke em messaging.status (validado PROD)',
+      tipo: 'json',
+      conteudo: `{
+  "event": "message.delivered",
+  "provider_message_id": "wamid.HBgL...",
+  "to": "+15815780564",
+  ...
+}`,
     },
     payloadSaida: {
-      titulo: 'Resposta 202 + msg na fila',
+      titulo: 'Log do worker PROD',
       tipo: 'json',
-      conteudo: `{ "status": "na_fila", "campanha_id": "..." }
-// + publish em genesis-campanhas`,
+      conteudo: `2026-05-23 00:50:54 | status_updater_worker |
+  status_updater_mensagem_nao_encontrada
+  wamid=wamid.HBgL... event=message.delivered
+
+# Pipeline funcionando. Mensagem com esse wamid
+# atualizaria status='entregue' + broadcast WS`,
     },
     observacoes: [
-      '✅ webhook_worker NÃO mais roda aqui (env var ON em PROD)',
-      '⏳ campanha_worker ainda roda aqui (sai na Fase 2)',
+      '✅ status_updater_worker ATIVO em PROD (consumindo messaging.status)',
+      '✅ inbound_processor_worker ATIVO em PROD (consumindo messaging.inbound)',
+      '✅ campanha_worker isolado em worker-genesis-campanhas',
+      '✅ webhook_worker isolado em worker-genesis-webhooks',
     ],
   },
   {
