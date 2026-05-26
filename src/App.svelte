@@ -1456,6 +1456,148 @@ except Exception as e:
       </p>
 
       <div class="grupo">
+        <h4>📍 Estado ATUAL (o que está rodando HOJE em PROD)</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Técnica 1 (F1)</span>
+            <h3>Chunking semântico</h3>
+            <p class="desc">Markdown-aware em Python puro. Quebra por ## ### \n\n sentença. Cada chunk leva "H1 &gt; H2 &gt; H3:" + conteúdo. backend/rag/chunker.py</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Infra (F2)</span>
+            <h3>Pinecone + 3-large</h3>
+            <p class="desc">Index <code>neural-architect</code> (3072 dim, AWS us-east-1). Embedding text-embedding-3-large. Namespace por tenant. top_k=30.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Técnica 2 (F3)</span>
+            <h3>Contextual Generation</h3>
+            <p class="desc">Anthropic 2024. gpt-4o-mini gera 1 frase de contexto pra cada chunk antes do embedding. -49% retrieval failure. Custo: ~$0.02 one-time IT Valley.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🔜 Técnica 4 (F4)</span>
+            <h3>Re-ranking</h3>
+            <p class="desc">BGE-reranker-v2-m3 local (grátis) ou Cohere rerank-3.5 (pago). Reordena top 30 → top 5 com cross-encoder. +30% NDCG@5.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🔜 Técnica 3 (F5)</span>
+            <h3>Hybrid Search</h3>
+            <p class="desc">Vector + BM25 com Reciprocal Rank Fusion. Captura match exato (MEC, Anhanguera). +15% recall. Custo $0.</p>
+          </div>
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">🎯 Recomendação</span>
+            <h3>O que falta atacar</h3>
+            <p class="desc">F4 (rerank BGE local) + F5 (hybrid BM25). Total ~3h. Chega no <strong>&lt;3% failure rate</strong> (estado da arte).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🆚 Antes vs Depois (smoke real Time IT Valley)</h4>
+        <p class="bloco-intro" style="font-size: 0.9em;">3 perguntas reais, mesma base de dados, resposta da IA em cada estado:</p>
+        <div class="grid-2">
+          <div class="bloco" style="cursor: default; border-left: 4px solid #f87171;">
+            <span class="tag">❌ RAG v1 (chunks 500 + ada-002)</span>
+            <h3>"Quais módulos tem a Pós em Eng. Dados?"</h3>
+            <p class="desc">"a ementa detalhada não está publicada no site no momento. A escola envia o PDF oficial ao solicitar via 'Receber informações'..." <strong>~600 chars genéricos</strong>. Failure: deu desculpa em vez de citar ementa.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ RAG v2 (F1+F2+F3 atual)</span>
+            <h3>Mesma pergunta — RAG v2</h3>
+            <p class="desc">"Módulo 1 — Programação para Engenheiros e Cientistas de Dados [CONFIRMADO NA BASE]. Ementa oficial: 'Fundamentos de Python aplicados à manipulação...' [Fonte 1/2]" <strong>7.503 chars estruturados com citações</strong>.</p>
+          </div>
+          <div class="bloco" style="cursor: default; border-left: 4px solid #f87171;">
+            <span class="tag">❌ RAG v1</span>
+            <h3>"A Pós em IA é certificada pelo MEC?"</h3>
+            <p class="desc">Antes não tinha resposta certeira — palavras "MEC" e "Anhanguera" ficavam em chunks órfãos. Falava genericamente sobre certificações.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ RAG v2</span>
+            <h3>Mesma pergunta — RAG v2</h3>
+            <p class="desc"><strong>326 chars certeiros:</strong> "Sim, a Pós em IA tem diploma MEC. Chancelada via parceria com a Anhanguera. Trecho oficial: 'O diploma é reconhecido pelo MEC, em função da parceria da IT Valley School com a Anhanguera...'"</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🏛️ Arquitetura do banco RAG (Pinecone)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Index</span>
+            <h3>neural-architect</h3>
+            <p class="desc">
+              • Cloud: AWS us-east-1 (serverless free)<br>
+              • Dimensão: 3072 (text-embedding-3-large)<br>
+              • Metric: cosine<br>
+              • Host: neural-architect-xb3w3p4.svc.aped-4627-b74a.pinecone.io
+            </p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Isolamento</span>
+            <h3>Namespace por tenant</h3>
+            <p class="desc">
+              • tenant-it-valley → 280 chunks atuais<br>
+              • tenant-cliente-X → futuro (zero risco vazamento)<br>
+              • Filter metadata: agent_id (cada agente tem seu RAG)<br>
+              • Auth: API key no Key Vault (kv-api-key-itvalley/pinecone-api-key)
+            </p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Metadata por chunk</span>
+            <h3>O que guardamos</h3>
+            <p class="desc">
+              • tenant_id, agent_id, doc_id, chunk_index<br>
+              • text (chunk original, full — sem truncar)<br>
+              • header_path (caminho "H1 &gt; H2 &gt; H3")<br>
+              • (futuro) sparse_vector pra hybrid search
+            </p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Pipeline ingestão</span>
+            <h3>Quando cliente sobe doc</h3>
+            <p class="desc">
+              1. extract_text (PDF/MD/HTML → markdown)<br>
+              2. chunk_markdown (semântico)<br>
+              3. generate_contexts (gpt-4o-mini)<br>
+              4. enrich_chunks (contexto + chunk)<br>
+              5. get_embeddings (3-large 3072 dim)<br>
+              6. store.upsert → Pinecone namespace=tenant
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🏗️ Arquitetura IT Valley aplicada (Clean Architecture)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">Princípios</span>
+            <h3>Como organizamos o RAG no backend</h3>
+            <p class="desc">
+              • routers/ → camada opaca HTTP<br>
+              • services/ → orquestração<br>
+              • factories/ → regras de negócio<br>
+              • data/repositories/ → Mongo (operacional)<br>
+              • <strong>rag/</strong> → módulo técnico isolado<br>
+              • <strong>Sem LangChain</strong> — Python puro, funções simples
+            </p>
+          </div>
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">backend/rag/</span>
+            <h3>Estrutura técnica</h3>
+            <p class="desc">
+              • chunker.py — Técnica 1 (semântico)<br>
+              • contextual.py — Técnica 2 (Anthropic)<br>
+              • embedder.py — OpenAI 3-large<br>
+              • vector_store.py — Pinecone backend<br>
+              • reranker.py — Técnica 4 (BGE/Cohere) 🔜<br>
+              • pipeline.py — orquestra tudo<br>
+              • text_extractor.py — PDF/DOCX/MD
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
         <h4>📐 Pipeline (clique pra detalhes técnicos)</h4>
         <p class="bloco-intro" style="font-size: 0.9em;">
           INGESTÃO → CHUNKING → CONTEXTUAL GEN → EMBEDDING → STORAGE → RETRIEVAL → RE-RANK → INJECTION

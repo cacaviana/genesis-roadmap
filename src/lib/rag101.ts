@@ -349,7 +349,7 @@ Receita esperada: 100 clientes × R$ 500/mês = **R$ 50.000/mês (~$10k)**
       { item: 'F2 — Embedding text-embedding-3-large', status: 'feito', nota: 'EMBEDDING_MODEL=text-embedding-3-large no Azure.' },
       { item: 'F2 — top_k 5 → 30', status: 'feito', nota: 'pipeline.py: top_k=30.' },
       { item: 'F2 — Smoke E2E ementa', status: 'feito', nota: '✅ IA passou a citar ementas oficiais com trechos literais.' },
-      { item: 'F3 — Contextual generation (Anthropic)', status: 'falta', nota: '~2h. -49% failure rate. Custa $0.02 reindex IT Valley.' },
+      { item: 'F3 — Contextual generation (Anthropic)', status: 'feito', nota: 'backend/rag/contextual.py. gpt-4o-mini gera 1 frase por chunk. -49% failure rate (paper). Smoke real confirmou: respostas mais estruturadas, citáveis, com header_path.' },
       { item: 'F4 — Re-ranking', status: 'falta', nota: '~1h. Carlos: começar com BGE local (grátis), trocar pra Cohere depois.' },
       { item: 'F5 — Hybrid search (vector + BM25)', status: 'falta', nota: '~2.5h. Pinecone tem nativo. +15% recall.' },
       { item: 'Bonus: DELETE /documentos retornando 405', status: 'falta', nota: 'Não bloqueante. Mongo Vector legacy fica com lixo (sem efeito).' },
