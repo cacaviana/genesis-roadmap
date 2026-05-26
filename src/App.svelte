@@ -13,9 +13,12 @@
   import { blocosAgora } from './lib/agora';
   import { blocosAgentes } from './lib/agentes';
   import { blocosRAG } from './lib/rag';
+  import { capitulosRAG, recursosExtras } from './lib/rag101';
   import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag';
+  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag' | 'rag101';
+
+  let capituloAberto = $state<number | null>(1);
 
   const stats = contarPorEstado();
   const areas = [...new Set(checklist.map(i => i.area))];
@@ -83,6 +86,7 @@
       <button class:ativo={tab === 'checklist'} onclick={() => tab = 'checklist'}>📋 Checklist</button>
       <button class:ativo={tab === 'agentes'} onclick={() => tab = 'agentes'}>🤖 Agentes IA</button>
       <button class:ativo={tab === 'rag'} onclick={() => tab = 'rag'}>🧠 RAG</button>
+      <button class:ativo={tab === 'rag101'} onclick={() => tab = 'rag101'}>📚 RAG 101 (curso)</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
   </div>
@@ -1546,6 +1550,159 @@ except Exception as e:
     </section>
   {/if}
 
+  {#if tab === 'rag101'}
+    <section>
+      <h2>📚 RAG 101 — Mini-curso do zero ao estado da arte</h2>
+      <p class="bloco-intro">
+        Pra ti + tua equipe entender <strong>por que estamos investindo em RAG estado da arte</strong> no AI-Teams.
+        Linguagem direta, analogias, exemplos antes/depois. 8 capítulos.
+        <br><br>
+        <strong>Tempo de leitura:</strong> ~20min. <strong>Pré-requisito:</strong> zero.
+      </p>
+
+      <div class="curso-toc">
+        <h4>📑 Sumário</h4>
+        <div class="grid-2">
+          {#each capitulosRAG as cap}
+            <button
+              class="curso-toc-item"
+              class:ativo={capituloAberto === cap.numero}
+              onclick={() => capituloAberto = capituloAberto === cap.numero ? null : cap.numero}
+            >
+              <span class="curso-toc-num">{cap.numero}</span>
+              <span class="curso-toc-icone">{cap.icone}</span>
+              <div class="curso-toc-texto">
+                <strong>{cap.titulo}</strong>
+                <small>{cap.resumo}</small>
+              </div>
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      {#each capitulosRAG as cap}
+        {#if capituloAberto === cap.numero}
+          <div class="curso-capitulo">
+            <div class="curso-cap-header">
+              <span class="curso-cap-num">Capítulo {cap.numero}</span>
+              <h3>{cap.icone} {cap.titulo}</h3>
+            </div>
+
+            <div class="curso-cap-conteudo">
+              {#each cap.conteudo.split('\n\n') as paragrafo}
+                {#if paragrafo.startsWith('## ')}
+                  <h4>{paragrafo.replace(/^## /, '')}</h4>
+                {:else if paragrafo.startsWith('### ')}
+                  <h5>{paragrafo.replace(/^### /, '')}</h5>
+                {:else if paragrafo.startsWith('```')}
+                  <pre class="curso-code">{paragrafo.replace(/^```\w*\n?/, '').replace(/\n?```$/, '')}</pre>
+                {:else if paragrafo.startsWith('|')}
+                  <div class="curso-tabela-wrapper">
+                    <table class="curso-tabela">
+                      {#each paragrafo.split('\n') as linha, i}
+                        {#if i === 0}
+                          <thead>
+                            <tr>
+                              {#each linha.split('|').slice(1, -1) as col}
+                                <th>{col.trim()}</th>
+                              {/each}
+                            </tr>
+                          </thead>
+                        {:else if i === 1}
+                          <!-- separador, ignora -->
+                        {:else}
+                          <tr>
+                            {#each linha.split('|').slice(1, -1) as col}
+                              <td>{@html col.trim().replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</td>
+                            {/each}
+                          </tr>
+                        {/if}
+                      {/each}
+                    </table>
+                  </div>
+                {:else}
+                  <p>{@html paragrafo.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</p>
+                {/if}
+              {/each}
+            </div>
+
+            {#if cap.exemplos}
+              <div class="curso-exemplos">
+                <h4>📝 Exemplos</h4>
+                {#each cap.exemplos as ex}
+                  <div class="curso-exemplo">
+                    <strong>{ex.titulo}</strong>
+                    {#if ex.antes}
+                      <pre class="exemplo-antes">{ex.antes}</pre>
+                    {/if}
+                    {#if ex.depois}
+                      <pre class="exemplo-depois">{ex.depois}</pre>
+                    {/if}
+                    {#if ex.texto}
+                      <pre class="curso-code">{ex.texto}</pre>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            {#if cap.glossario}
+              <div class="curso-glossario">
+                <h4>📖 Glossário deste capítulo</h4>
+                <dl>
+                  {#each cap.glossario as g}
+                    <dt>{g.termo}</dt>
+                    <dd>{g.definicao}</dd>
+                  {/each}
+                </dl>
+              </div>
+            {/if}
+
+            {#if cap.checklist}
+              <div class="curso-checklist">
+                {#each cap.checklist as it}
+                  <div class="curso-check-item curso-check-{it.status}">
+                    <span class="check-icon">
+                      {#if it.status === 'feito'}✅
+                      {:else if it.status === 'parcial'}🟡
+                      {:else}⏳{/if}
+                    </span>
+                    <div>
+                      <strong>{it.item}</strong>
+                      {#if it.nota}<small>{it.nota}</small>{/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            <div class="curso-nav">
+              {#if cap.numero > 1}
+                <button class="curso-nav-btn" onclick={() => capituloAberto = cap.numero - 1}>
+                  ← Capítulo {cap.numero - 1}
+                </button>
+              {/if}
+              {#if cap.numero < capitulosRAG.length}
+                <button class="curso-nav-btn curso-nav-next" onclick={() => capituloAberto = cap.numero + 1}>
+                  Capítulo {cap.numero + 1} →
+                </button>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      {/each}
+
+      <div class="curso-recursos">
+        <h4>🔗 Recursos extras (pra aprofundar)</h4>
+        <ul>
+          {#each recursosExtras as r}
+            <li><a href={r.url} target="_blank" rel="noopener">{r.titulo}</a></li>
+          {/each}
+        </ul>
+      </div>
+    </section>
+  {/if}
+
   {#if tab === 'ferramentas'}
     <section>
       <h2>Ferramentas</h2>
@@ -2106,5 +2263,270 @@ except Exception as e:
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px solid var(--border);
+  }
+
+  /* ===== Mini-curso RAG 101 ===== */
+  .curso-toc {
+    margin-bottom: 32px;
+  }
+  .curso-toc h4 {
+    margin-bottom: 12px;
+  }
+  .curso-toc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+  }
+  .curso-toc-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .curso-toc-item.ativo {
+    border-color: var(--accent);
+    background: rgba(96, 165, 250, 0.08);
+  }
+  .curso-toc-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .curso-toc-icone {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .curso-toc-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .curso-toc-texto strong {
+    font-size: 14px;
+  }
+  .curso-toc-texto small {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .curso-capitulo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+  }
+  .curso-cap-header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  .curso-cap-num {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .curso-cap-header h3 {
+    margin: 4px 0 0 0;
+    font-size: 28px;
+  }
+  .curso-cap-conteudo {
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .curso-cap-conteudo h4 {
+    margin-top: 28px;
+    margin-bottom: 12px;
+    font-size: 18px;
+    color: var(--accent-light, #93c5fd);
+  }
+  .curso-cap-conteudo h5 {
+    margin-top: 20px;
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+  .curso-cap-conteudo p {
+    margin: 12px 0;
+  }
+  .curso-cap-conteudo code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .curso-code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 12px 0;
+    white-space: pre-wrap;
+  }
+  .curso-tabela-wrapper {
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .curso-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .curso-tabela th {
+    background: rgba(96, 165, 250, 0.15);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--accent);
+    font-weight: 600;
+  }
+  .curso-tabela td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .curso-exemplos {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .curso-exemplo {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 12px 0;
+  }
+  .curso-exemplo strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--accent-light, #93c5fd);
+  }
+  .exemplo-antes {
+    background: rgba(248, 113, 113, 0.1);
+    border-left: 3px solid #f87171;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    font-size: 13px;
+  }
+  .exemplo-depois {
+    background: rgba(74, 222, 128, 0.1);
+    border-left: 3px solid #4ade80;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    font-size: 13px;
+  }
+  .curso-glossario {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .curso-glossario dl {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 12px 24px;
+    margin: 12px 0;
+  }
+  .curso-glossario dt {
+    font-weight: 600;
+    color: var(--accent-light, #93c5fd);
+  }
+  .curso-glossario dd {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .curso-checklist {
+    margin-top: 16px;
+  }
+  .curso-check-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    margin: 8px 0;
+    border-left: 3px solid var(--border);
+  }
+  .curso-check-item.curso-check-feito {
+    border-left-color: #4ade80;
+  }
+  .curso-check-item.curso-check-parcial {
+    border-left-color: #fbbf24;
+  }
+  .curso-check-item.curso-check-falta {
+    border-left-color: #94a3b8;
+  }
+  .check-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .curso-check-item strong {
+    display: block;
+    font-size: 14px;
+  }
+  .curso-check-item small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .curso-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .curso-nav-btn {
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent-light, #93c5fd);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .curso-nav-btn:hover {
+    background: rgba(96, 165, 250, 0.2);
+  }
+  .curso-nav-next {
+    margin-left: auto;
+  }
+  .curso-recursos {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .curso-recursos ul {
+    padding-left: 20px;
+    margin: 12px 0;
+  }
+  .curso-recursos li {
+    margin: 8px 0;
+  }
+  .curso-recursos a {
+    color: var(--accent-light, #93c5fd);
+    text-decoration: none;
+  }
+  .curso-recursos a:hover {
+    text-decoration: underline;
   }
 </style>
