@@ -12,9 +12,10 @@
   import { execucao, recursosProvisionados, prs, pendencias } from './lib/execucao';
   import { blocosAgora } from './lib/agora';
   import { blocosAgentes } from './lib/agentes';
+  import { blocosRAG } from './lib/rag';
   import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes';
+  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag';
 
   const stats = contarPorEstado();
   const areas = [...new Set(checklist.map(i => i.area))];
@@ -81,6 +82,7 @@
       <button class:ativo={tab === 'execucao'} onclick={() => tab = 'execucao'}>✅ Execução</button>
       <button class:ativo={tab === 'checklist'} onclick={() => tab = 'checklist'}>📋 Checklist</button>
       <button class:ativo={tab === 'agentes'} onclick={() => tab = 'agentes'}>🤖 Agentes IA</button>
+      <button class:ativo={tab === 'rag'} onclick={() => tab = 'rag'}>🧠 RAG</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
   </div>
@@ -1433,6 +1435,111 @@ except Exception as e:
             <span class="tag">Botão 2</span>
             <h3>👤 Re-pegar mensagem</h3>
             <p class="desc">Operador clica → <code>conversa.modo = 'humano'</code>. IA para imediatamente. Operador responde manual. Histórico fica salvo — IA pode ser reativada depois.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'rag'}
+    <section>
+      <h2>🧠 RAG — Pipeline estado da arte (8 etapas)</h2>
+      <p class="bloco-intro">
+        Como os agentes da IA <strong>realmente lembram</strong> dos cursos da IT Valley.
+        Sem LangChain. Python puro. Chunks semânticos. Pinecone. Contextual retrieval da Anthropic. Cohere rerank.
+        <br><br>
+        <strong>Doc técnico:</strong> <code>cacaviana/ai-teams/docs/RAG_ARCHITECTURE.md</code>
+      </p>
+
+      <div class="grupo">
+        <h4>📐 Pipeline (clique pra detalhes técnicos)</h4>
+        <p class="bloco-intro" style="font-size: 0.9em;">
+          INGESTÃO → CHUNKING → CONTEXTUAL GEN → EMBEDDING → STORAGE → RETRIEVAL → RE-RANK → INJECTION
+        </p>
+        <div class="grid-3">
+          {#each blocosRAG as b}
+            <Bloco bloco={b} onclick={abrirPainel} />
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🎯 5 princípios inegociáveis</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">Princípio 1</span>
+            <h3>Sem LangChain</h3>
+            <p class="desc">Lib inflada, breaking changes, abstrações demais. Python puro com OpenAI SDK + Pinecone client direto. ~200 linhas resolvem o que LangChain faz em 2000.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Princípio 2</span>
+            <h3>Chunks semânticos</h3>
+            <p class="desc">Quebra por estrutura (## headers) — nunca por contagem de chars. Cada chunk é uma unidade auto-contida de significado.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Princípio 3</span>
+            <h3>Contexto pai injetado</h3>
+            <p class="desc">Cada chunk leva o caminho hierárquico ("H1 &gt; H2 &gt; H3:") + resumo de contexto. Chunk órfão = retrieval ruim.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Princípio 4</span>
+            <h3>Multi-tenant nativo</h3>
+            <p class="desc">Namespace por tenant_id no Pinecone. Filtro por agent_id em metadata. Zero risco de vazamento entre clientes.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Princípio 5</span>
+            <h3>Observável</h3>
+            <p class="desc">Cada query loga: latência por etapa, scores dos top 5, custo. Métricas em Application Insights + alertas.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>📊 Comparação: RAG v1 (broken) vs RAG v2 (state of art)</h4>
+        <div class="grid-2">
+          <div class="bloco" style="cursor: default; border-left: 4px solid #f87171;">
+            <span class="tag">❌ RAG v1 — atual</span>
+            <h3>O que estava errado</h3>
+            <p class="desc">
+              • Chunks de 500 chars genéricos (corta no meio de seção)<br>
+              • Embedding ada-002 (legado, MTEB 60.99)<br>
+              • Mongo Atlas Vector (sem hybrid)<br>
+              • top_k=5 sem rerank<br>
+              • Failure rate ~50% pra perguntas estruturadas
+            </p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ RAG v2 — alvo</span>
+            <h3>Estado da arte</h3>
+            <p class="desc">
+              • Markdown-aware chunking (semântico)<br>
+              • Contextual generation (Anthropic 2024)<br>
+              • text-embedding-3-large (MTEB 64.59)<br>
+              • Pinecone hybrid (vector + BM25)<br>
+              • Cohere rerank-3 (top 5 final)<br>
+              • Failure rate &lt;3% (provado em paper)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>💰 Custo (pro Time IT Valley — 12 docs)</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">One-time</span>
+            <h3>Ingestão completa</h3>
+            <p class="desc">~$0.50 (contextual gen com gpt-4o-mini + embedding 3-large). Roda 1x por documento.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Por query</span>
+            <h3>Custo de cada resposta</h3>
+            <p class="desc">~$0.001 (embedding da query + Cohere rerank). gpt-5 do agente é custo separado.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Free tier</span>
+            <h3>Pinecone + Cohere</h3>
+            <p class="desc">Pinecone serverless free: 100k vectors, 5 indexes. Cohere rerank free: 1k req/mês. Vai bater quando escalar.</p>
           </div>
         </div>
       </div>
