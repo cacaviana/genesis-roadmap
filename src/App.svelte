@@ -11,9 +11,10 @@
   import { quemFazOQue, antipadroes, estadosMsg, oQueGenesisGuarda } from './lib/bancoFila';
   import { execucao, recursosProvisionados, prs, pendencias } from './lib/execucao';
   import { blocosAgora } from './lib/agora';
+  import { blocosAgentes } from './lib/agentes';
   import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist';
+  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes';
 
   const stats = contarPorEstado();
   const areas = [...new Set(checklist.map(i => i.area))];
@@ -79,6 +80,7 @@
       <button class:ativo={tab === 'plano'} onclick={() => tab = 'plano'}>Plano de ação</button>
       <button class:ativo={tab === 'execucao'} onclick={() => tab = 'execucao'}>✅ Execução</button>
       <button class:ativo={tab === 'checklist'} onclick={() => tab = 'checklist'}>📋 Checklist</button>
+      <button class:ativo={tab === 'agentes'} onclick={() => tab = 'agentes'}>🤖 Agentes IA</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
   </div>
@@ -1376,6 +1378,64 @@ except Exception as e:
           </table>
         </div>
       {/each}
+    </section>
+  {/if}
+
+  {#if tab === 'agentes'}
+    <section>
+      <h2>🤖 Agentes IA — Neural Architect integrado ao Genesis</h2>
+      <p class="bloco-intro">
+        Cliente conversa no WhatsApp. Genesis decide se IA responde ou humano. Se IA, uma <strong>equipe de agentes hierárquica</strong> processa: orquestrador delega pra especialistas (suporte, vendas, mídia). Meta: 80% resolvido por IA, 20% escalado pro humano.
+      </p>
+
+      <div class="grupo">
+        <h4>📍 Status atual</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Deployado</span>
+            <h3>Neural Architect rodando</h3>
+            <p class="desc">Backend + frontend em Azure NoPROD. Mongo Atlas, OpenAI gpt-5, JWT auth. <a href="https://app-ai-teams-frontend-accp.azurewebsites.net" target="_blank" rel="noopener">Abrir UI</a></p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🔜 Faltando</span>
+            <h3>Integração com Genesis</h3>
+            <p class="desc">Botões 🤖 Ativar IA / 👤 Re-pegar no chat. Endpoint que chama Neural Architect. Conversa.modo. Smoke E2E com número do Carlos.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Futuro</span>
+            <h3>RAG aprendendo</h3>
+            <p class="desc">Cada caso resolvido vira documento no RAG. IA fica mais inteligente em produção. Operador re-pega → resposta dele alimenta RAG.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🔄 Fluxo end-to-end (clique pra detalhes)</h4>
+        <p class="bloco-intro" style="font-size: 0.9em;">
+          INPUT → DECISÃO IA/HUMANO → NEURAL ARCHITECT → OUTPUT
+        </p>
+        <div class="grid-3">
+          {#each blocosAgentes as b}
+            <Bloco bloco={b} onclick={abrirPainel} />
+          {/each}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🎯 Os 2 botões no chat do Genesis (a fazer)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--purple" style="cursor: default;">
+            <span class="tag">Botão 1</span>
+            <h3>🤖 Ativar IA</h3>
+            <p class="desc">Operador clica → <code>conversa.modo = 'ia'</code>. Próximas mensagens do cliente vão pro Neural Architect e voltam SOZINHAS. Operador pode acompanhar mas não precisa responder.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Botão 2</span>
+            <h3>👤 Re-pegar mensagem</h3>
+            <p class="desc">Operador clica → <code>conversa.modo = 'humano'</code>. IA para imediatamente. Operador responde manual. Histórico fica salvo — IA pode ser reativada depois.</p>
+          </div>
+        </div>
+      </div>
     </section>
   {/if}
 
