@@ -54,7 +54,7 @@ LLMs (GPT, Claude, Gemini) têm 3 problemas:
 | Inventa quando não sabe | Cita a fonte |
 | Conhecimento fixo na cabeça | Pode consultar qualquer livro novo |
 
-**RAG transforma um LLM "burro pro teu negócio" num assistente que conhece TUA empresa.**`,
+**RAG transforma um LLM "burro pro teu negócio" num assistente que conhece TUA empresa.**',
     exemplos: [
       {
         titulo: 'Pergunta sobre curso IT Valley',
@@ -71,11 +71,11 @@ LLMs (GPT, Claude, Gemini) têm 3 problemas:
     titulo: 'As 5 peças básicas',
     icone: '🧩',
     resumo: 'Documento → Chunks → Embeddings → Vector DB → Retrieval.',
-    conteudo: `Todo sistema de RAG tem **5 peças** em sequência. Entendeu essas 5, entendeu RAG.
+    conteudo: 'Todo sistema de RAG tem **5 peças** em sequência. Entendeu essas 5, entendeu RAG.
 
 ## 1. Documentos
 **O que é:** os conteúdos da empresa. PDFs, páginas de site, FAQ, manuais técnicos, ementas, contratos.
-**Exemplo IT Valley:** 12 páginas do site `br.itvalleyschool.com`, em markdown.
+**Exemplo IT Valley:** 12 páginas do site 'br.itvalleyschool.com', em markdown.
 
 ## 2. Chunking
 **O que é:** cortar cada documento em pedaços pequenos ("chunks").
@@ -86,7 +86,7 @@ LLMs (GPT, Claude, Gemini) têm 3 problemas:
 ## 3. Embeddings
 **O que é:** transformar cada chunk de texto num **vetor** (lista de números, tipo [0.23, -0.84, 0.12, ...] com 1536 ou 3072 dimensões).
 **Por quê:** computador não compara texto, compara números. Vetores próximos = textos semanticamente parecidos.
-**Modelo:** \`text-embedding-3-large\` da OpenAI (estado da arte 2026).
+**Modelo:** 'text-embedding-3-large' da OpenAI (estado da arte 2026).
 
 ## 4. Vector Database
 **O que é:** banco especializado em guardar e buscar vetores em alta velocidade.
@@ -95,11 +95,11 @@ LLMs (GPT, Claude, Gemini) têm 3 problemas:
 
 ## 5. Retrieval + Geração
 **O que é:** pegar a pergunta → buscar top chunks no vector DB → mandar pra LLM (gpt-5) → ela responde com base nos chunks.
-**Resultado:** resposta com fontes reais, não inventada.`,
+**Resultado:** resposta com fontes reais, não inventada.',
     exemplos: [
       {
         titulo: 'Fluxo prático',
-        texto: `Cliente: "Quais módulos tem a Pós em Eng. Dados?"
+        texto: 'Cliente: "Quais módulos tem a Pós em Eng. Dados?"
    ↓
 Sistema gera vetor da pergunta: [0.42, -0.18, 0.71, ...]
    ↓
@@ -112,7 +112,7 @@ Devolve top 30 chunks mais parecidos:
    ↓
 GPT-5 lê esses 30 chunks + pergunta original
    ↓
-Responde: "A Pós em Eng. Dados tem os seguintes módulos: 1) Engenharia em cloud — estuda AWS, Azure, GCP; 2) Banco de dados avançados — ..."`,
+Responde: "A Pós em Eng. Dados tem os seguintes módulos: 1) Engenharia em cloud — estuda AWS, Azure, GCP; 2) Banco de dados avançados — ..."',
       },
     ],
     glossario: [
@@ -130,7 +130,7 @@ Responde: "A Pós em Eng. Dados tem os seguintes módulos: 1) Engenharia em clou
     titulo: 'Por que o RAG básico falha',
     icone: '⚠️',
     resumo: 'Chunks de 500 chars cortam contexto no meio. Ementa fica órfã.',
-    conteudo: `O RAG "padrão de 2022" usa **chunks de 500 caracteres genéricos**. Funcionava quando documentos eram simples (FAQ linear, texto bruto).
+    conteudo: 'O RAG "padrão de 2022" usa **chunks de 500 caracteres genéricos**. Funcionava quando documentos eram simples (FAQ linear, texto bruto).
 
 **Hoje (2026) os documentos são complexos:** markdown estruturado, PDFs com seções aninhadas, código. **Chunks genéricos destroem essa estrutura.**
 
@@ -139,7 +139,7 @@ Responde: "A Pós em Eng. Dados tem os seguintes módulos: 1) Engenharia em clou
 Pergunta do cliente: *"Quais módulos tem a Pós em Engenharia de Dados?"*
 
 ### Markdown original do site:
-\`\`\`
+'''
 ## Pós em Engenharia de Dados
 
 ### Engenharia de dados em cloud
@@ -147,16 +147,16 @@ Ementa: Estudo das plataformas de cloud (AWS, Azure, GCP)...
 
 ### Banco de dados avançados
 Ementa: Sistemas objeto-relacional...
-\`\`\`
+'''
 
 ### Chunker burro de 500 chars vê:
-- **Chunk A:** \`"## Pós em Eng. Dados ### Engenharia de dados em cloud Ementa:"\`
+- **Chunk A:** '"## Pós em Eng. Dados ### Engenharia de dados em cloud Ementa:"'
   → **Só TÍTULOS.** Embedding vira genérico tipo "lista de coisas".
 
-- **Chunk B:** \`"Estudo das plataformas (AWS, Azure, GCP). Configuração, pipelines..."\`
+- **Chunk B:** '"Estudo das plataformas (AWS, Azure, GCP). Configuração, pipelines..."'
   → **Só CONTEÚDO.** Mas SEM saber que isso é ementa de "Engenharia em cloud" da "Pós em Eng. Dados".
 
-- **Chunk C:** \`"### Banco de dados avançados Ementa: Sistemas objeto-relacional..."\`
+- **Chunk C:** '"### Banco de dados avançados Ementa: Sistemas objeto-relacional..."'
   → **Mistura 2 disciplinas.** Confusão.
 
 ### Quando IA tenta responder:
@@ -169,7 +169,7 @@ Benchmarks públicos (BEIR, 2023) mostram que RAG com chunks 500 chars **falha e
 
 Para queries estruturadas (tipo "liste todos os módulos de X"), o failure rate chega a **50%**.
 
-**É a história do nosso caso da ementa que tu viu.**`,
+**É a história do nosso caso da ementa que tu viu.**',
     exemplos: [
       {
         titulo: 'Comparação real',
@@ -186,7 +186,7 @@ Para queries estruturadas (tipo "liste todos os módulos de X"), o failure rate 
     titulo: 'As 4 técnicas estado da arte',
     icone: '🚀',
     resumo: 'Chunking semântico + Contextual gen + Hybrid + Rerank.',
-    conteudo: `A indústria amadureceu em 2024-2025. **4 técnicas viraram padrão** pra resolver os problemas do RAG básico:
+    conteudo: 'A indústria amadureceu em 2024-2025. **4 técnicas viraram padrão** pra resolver os problemas do RAG básico:
 
 ## Técnica 1: Chunking semântico (markdown-aware)
 **Problema que resolve:** chunks órfãos sem contexto.
@@ -244,7 +244,7 @@ Para queries estruturadas (tipo "liste todos os módulos de X"), o failure rate 
 | + Hybrid search | 8% failure (-47%) |
 | + Re-ranking | **<3% failure** (-67%) |
 
-**De 50% → <3% de falhas. RAG state of art.**`,
+**De 50% → <3% de falhas. RAG state of art.**',
   },
 
   // ============================================================
@@ -254,9 +254,9 @@ Para queries estruturadas (tipo "liste todos os módulos de X"), o failure rate 
     titulo: 'O pipeline completo da AI-Teams',
     icone: '⚙️',
     resumo: '8 etapas: ingestão → chunking → contextual → embedding → store → retrieval → rerank → injection.',
-    conteudo: `Combinando as 4 técnicas, o pipeline tem **8 etapas**:
+    conteudo: 'Combinando as 4 técnicas, o pipeline tem **8 etapas**:
 
-\`\`\`
+'''
 INGESTÃO  →  CHUNKING  →  CONTEXTUAL GEN  →  EMBEDDING  →  STORAGE
 (MD/PDF)     (semântico)   (Anthropic)        (3-large)     (Pinecone)
                                                                 ↓
@@ -266,7 +266,7 @@ INGESTÃO  →  CHUNKING  →  CONTEXTUAL GEN  →  EMBEDDING  →  STORAGE
                 gpt-5
                   ↓
               Resposta com fontes citadas
-\`\`\`
+'''
 
 ## Aba dedicada com quadradinhos
 
@@ -280,7 +280,7 @@ Pra ver **cada etapa em detalhe** (entrada, saída, código, custos), abra a **a
 | **Chunks semânticos** | Nunca cortar por contagem de chars. Sempre por estrutura (headers). |
 | **Contexto pai injetado** | Cada chunk leva "H1 > H2 > H3:" + resumo de contexto. |
 | **Multi-tenant nativo** | Namespace Pinecone por tenant. Zero risco de vazamento entre clientes. |
-| **Observável** | Cada query loga latência, scores, custo. Application Insights + alertas. |`,
+| **Observável** | Cada query loga latência, scores, custo. Application Insights + alertas. |',
   },
 
   // ============================================================
@@ -290,7 +290,7 @@ Pra ver **cada etapa em detalhe** (entrada, saída, código, custos), abra a **a
     titulo: 'Quanto custa?',
     icone: '💰',
     resumo: '$0.03 reindex completo IT Valley. $3.200/mês pra 100 clientes.',
-    conteudo: `**Resumo:** RAG state of art **NÃO é caro.** O modelo do agente (gpt-5) é 94% do custo total. RAG é só 6%.
+    conteudo: '**Resumo:** RAG state of art **NÃO é caro.** O modelo do agente (gpt-5) é 94% do custo total. RAG é só 6%.
 
 ## Custo por etapa (preço unitário)
 
@@ -332,7 +332,7 @@ Receita esperada: 100 clientes × R$ 500/mês = **R$ 50.000/mês (~$10k)**
 | Trocar gpt-5 → gpt-5-mini no agente | -70% custo LLM | -10% qualidade |
 | Trocar Cohere → BGE local | -$200/mês | +500ms latência por query |
 | Cache de respostas idênticas (5min TTL) | -30% custo total | risco de cache stale |
-| Trocar 3-large → 3-small (embedding) | -85% custo embedding | -2 pontos MTEB (~3% qualidade) |`,
+| Trocar 3-large → 3-small (embedding) | -85% custo embedding | -2 pontos MTEB (~3% qualidade) |',
   },
 
   // ============================================================
@@ -342,7 +342,7 @@ Receita esperada: 100 clientes × R$ 500/mês = **R$ 50.000/mês (~$10k)**
     titulo: 'Checklist de implementação',
     icone: '✅',
     resumo: 'O que tá feito, em curso e pendente da AI-Teams.',
-    conteudo: `Estado atual da implementação RAG no Neural Architect:`,
+    conteudo: 'Estado atual da implementação RAG no Neural Architect:',
     checklist: [
       { item: 'F1 — Markdown-aware chunker (Python puro)', status: 'feito', nota: 'backend/rag/chunker.py reescrito. ~50 linhas, sem libs.' },
       { item: 'F2 — Migrar Mongo → Pinecone', status: 'feito', nota: 'Index neural-architect (3072 dim) ativo. 280 chunks indexados.' },
@@ -365,7 +365,7 @@ Receita esperada: 100 clientes × R$ 500/mês = **R$ 50.000/mês (~$10k)**
     titulo: 'Glossário (cola pra equipe)',
     icone: '📖',
     resumo: 'Todos os termos técnicos em 1 linha.',
-    conteudo: `Cola rápida pra equipe que ouvir esses termos:`,
+    conteudo: 'Cola rápida pra equipe que ouvir esses termos:`,
     glossario: [
       { termo: 'RAG', definicao: 'Retrieval-Augmented Generation. IA "consulta a base" antes de responder.' },
       { termo: 'LLM', definicao: 'Large Language Model. GPT-5, Claude, Gemini. Modelo que gera texto.' },
