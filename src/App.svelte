@@ -16,7 +16,7 @@
   import { capitulosRAG, recursosExtras } from './lib/rag101';
   import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag' | 'rag101';
+  type Tab = 'hoje' | 'agora' | 'pilares' | 'recursos' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag' | 'rag101';
 
   let capituloAberto = $state<number | null>(1);
 
@@ -78,6 +78,7 @@
       <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como era hoje</button>
       <button class:ativo={tab === 'agora'} onclick={() => tab = 'agora'}>🆕 Como está agora</button>
       <button class:ativo={tab === 'pilares'} onclick={() => tab = 'pilares'}>🛡️ Pilares</button>
+      <button class:ativo={tab === 'recursos'} onclick={() => tab = 'recursos'}>🔗 Recursos</button>
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
       <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
       <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
@@ -1990,6 +1991,208 @@ except Exception as e:
             • <em>"observabilidade"</em> → o sintoma de estar debugando no escuro.<br>
             • <em>"minha equipe vai usar"</em> → solução tem que ser robusta, não MVP.<br>
             • <em>"deveria ter prefixo prod, ne?"</em> → Carlos chegou na causa raiz antes do Claude.
+          </p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'recursos'}
+    <section>
+      <h2>🔗 Recursos — links pra equipe</h2>
+      <p class="bloco-intro">
+        Tudo que Henrique, Polly e qualquer dev novo precisam pra começar:
+        repos, apps em PROD/staging, bancos, dashboards e login.
+        <strong>⚠️ Trocar a senha listada aqui assim que cada dev tiver acesso próprio.</strong>
+      </p>
+
+      <div class="grupo">
+        <h4>📦 Repositórios GitHub</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Genesis (CRM + WhatsApp)</span>
+            <h3>ITValley-School/projetogenesis</h3>
+            <p class="desc"><a href="https://github.com/ITValley-School/projetogenesis" target="_blank" rel="noopener">github.com/ITValley-School/projetogenesis</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">AI-Teams (Neural Architect)</span>
+            <h3>cacaviana/ai-teams</h3>
+            <p class="desc"><a href="https://github.com/cacaviana/ai-teams" target="_blank" rel="noopener">github.com/cacaviana/ai-teams</a> <strong>(privado — Carlos precisa adicionar como collaborator)</strong></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">messaging-service (Polly)</span>
+            <h3>ITValley-School/messaging-service</h3>
+            <p class="desc"><a href="https://github.com/ITValley-School/messaging-service" target="_blank" rel="noopener">github.com/ITValley-School/messaging-service</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Site Genesis Roadmap (este site)</span>
+            <h3>cacaviana/genesis-roadmap</h3>
+            <p class="desc"><a href="https://github.com/cacaviana/genesis-roadmap" target="_blank" rel="noopener">github.com/cacaviana/genesis-roadmap</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🌐 Apps em PROD</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Backend</span>
+            <h3>Genesis API</h3>
+            <p class="desc"><a href="https://genesisbackendd.azurewebsites.net/api/health" target="_blank" rel="noopener">genesisbackendd.azurewebsites.net</a><br>Plan: plan-genesis-backend (P1V3, 8GB) — Canada Central</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Frontend operador</span>
+            <h3>Genesis UI</h3>
+            <p class="desc"><a href="https://genesisfrontend.azurewebsites.net" target="_blank" rel="noopener">genesisfrontend.azurewebsites.net</a><br>Plan: plan-itvalley-free (F1)</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Backend IA</span>
+            <h3>AI-Teams API</h3>
+            <p class="desc"><a href="https://app-ai-teams-backend-prod.azurewebsites.net/api/health" target="_blank" rel="noopener">app-ai-teams-backend-prod.azurewebsites.net</a><br>Plan: plan-ai-teams-prod (B2, isolado) — Canada Central</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Frontend admin IA</span>
+            <h3>AI-Teams UI (ainda só ACCP)</h3>
+            <p class="desc"><a href="https://app-ai-teams-frontend-accp.azurewebsites.net" target="_blank" rel="noopener">app-ai-teams-frontend-accp.azurewebsites.net</a><br>PROD frontend pendente — usa ACCP por enquanto</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Gateway WhatsApp</span>
+            <h3>messaging-service (Polly)</h3>
+            <p class="desc"><a href="https://messaging-service-itvalley-prod.azurewebsites.net" target="_blank" rel="noopener">messaging-service-itvalley-prod.azurewebsites.net</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Site docs (este)</span>
+            <h3>Genesis Roadmap</h3>
+            <p class="desc"><a href="https://calm-moss-0e9dd3c0f.7.azurestaticapps.net" target="_blank" rel="noopener">calm-moss-0e9dd3c0f.7.azurestaticapps.net</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🌱 Apps em ACCP (staging)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Genesis backend staging</span>
+            <h3>app-genesis-backend-accp</h3>
+            <p class="desc"><a href="https://app-genesis-backend-accp.azurewebsites.net/api/health" target="_blank" rel="noopener">app-genesis-backend-accp.azurewebsites.net</a></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Genesis frontend staging</span>
+            <h3>app-genesis-frontend-accp</h3>
+            <p class="desc"><a href="https://app-genesis-frontend-accp.azurewebsites.net" target="_blank" rel="noopener">app-genesis-frontend-accp.azurewebsites.net</a></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">AI-Teams backend staging</span>
+            <h3>app-ai-teams-backend-accp</h3>
+            <p class="desc"><a href="https://app-ai-teams-backend-accp.azurewebsites.net/api/health" target="_blank" rel="noopener">app-ai-teams-backend-accp.azurewebsites.net</a></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">AI-Teams frontend staging</span>
+            <h3>app-ai-teams-frontend-accp</h3>
+            <p class="desc"><a href="https://app-ai-teams-frontend-accp.azurewebsites.net" target="_blank" rel="noopener">app-ai-teams-frontend-accp.azurewebsites.net</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🗄️ Bancos, storage, secrets</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Banco Genesis</span>
+            <h3>Azure SQL Server</h3>
+            <p class="desc">Schema <code>genesis</code>. Connection string em Key Vault: <code>MSSQL_URL-genesis</code></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Banco AI-Teams</span>
+            <h3>MongoDB Atlas</h3>
+            <p class="desc">Dashboard: <a href="https://cloud.mongodb.com" target="_blank" rel="noopener">cloud.mongodb.com</a><br>Connection string em KV: <code>mongodb-uri</code></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Vector store (RAG)</span>
+            <h3>Pinecone</h3>
+            <p class="desc">Dashboard: <a href="https://app.pinecone.io" target="_blank" rel="noopener">app.pinecone.io</a><br>Index: <code>neural-architect</code> (3072 dim, text-embedding-3-large)<br>API key em KV: <code>pinecone-api-key</code></p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Filas async</span>
+            <h3>Azure Service Bus</h3>
+            <p class="desc">PROD: <code>genesisitvalley</code><br>ACCP: <code>genesisitvalley-accp</code> (isolado desde 26/05)</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Secrets centralizados</span>
+            <h3>Azure Key Vault</h3>
+            <p class="desc">Nome: <code>kv-api-key-itvalley</code><br>Acesso via Managed Identity dos apps (sem senha em código)</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Telemetria</span>
+            <h3>Application Insights</h3>
+            <p class="desc">Recurso: <code>appi-genesis</code><br>Centraliza logs de todos os apps PROD</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🔑 Login (atual — substituir por contas individuais)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">Genesis (operador)</span>
+            <h3>Login admin</h3>
+            <p class="desc">URL: <a href="https://genesisfrontend.azurewebsites.net/login" target="_blank" rel="noopener">genesisfrontend.azurewebsites.net/login</a><br>Email: <code>carlosvianacomp@gmail.com</code><br>Senha: <code>Itvalley01.</code><br><strong>⚠️ Trocar e criar conta separada por dev.</strong></p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">AI-Teams (admin agentes)</span>
+            <h3>Login admin</h3>
+            <p class="desc">URL: <a href="https://app-ai-teams-frontend-accp.azurewebsites.net" target="_blank" rel="noopener">app-ai-teams-frontend-accp.azurewebsites.net</a><br>Email: <code>carlosvianacomp@gmail.com</code><br>Senha: <code>Itvalley01.</code> (mesma — Mongo compartilhado)<br>Tenant: <code>tenant-it-valley</code> &middot; Role: admin</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>📄 Docs no repo Genesis (ler primeiro)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🥇 Primeiro a ler</span>
+            <h3>arquitetura-rag-genesis-ai-teams.md</h3>
+            <p class="desc">Visão geral + fluxo + RAG + componentes. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/docs/arquitetura-rag-genesis-ai-teams.md" target="_blank" rel="noopener">Abrir no GitHub</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Deploy</span>
+            <h3>deploy-runbook.md</h3>
+            <p class="desc">Como funciona deploy slots + rollback emergência. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/docs/deploy-runbook.md" target="_blank" rel="noopener">Abrir</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Pendências</span>
+            <h3>plano-amanha-2026-05-27.md</h3>
+            <p class="desc">Items priorizados + esforço + riscos. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/docs/plano-amanha-2026-05-27.md" target="_blank" rel="noopener">Abrir</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Bugs UX</span>
+            <h3>caderno-testes-ia-2026-05-27.md</h3>
+            <p class="desc">9 bugs descobertos nos smokes E2E. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/docs/caderno-testes-ia-2026-05-27.md" target="_blank" rel="noopener">Abrir</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">TODO ativo</span>
+            <h3>to-do.md</h3>
+            <p class="desc">Concluído + próximas atividades + débitos técnicos. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/to-do.md" target="_blank" rel="noopener">Abrir</a></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Histórico</span>
+            <h3>contexto.md</h3>
+            <p class="desc">Decisões arquiteturais + histórico de incidentes. <a href="https://github.com/ITValley-School/projetogenesis/blob/main/contexto.md" target="_blank" rel="noopener">Abrir</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🛡️ Segurança — checklist antes de dar pra equipe</h4>
+        <div class="bloco bloco--warn" style="cursor: default;">
+          <span class="tag">Antes de compartilhar</span>
+          <h3>Fazer estas 5 coisas</h3>
+          <p class="desc">
+            1. <strong>Trocar senha</strong> <code>Itvalley01.</code> (está exposta aqui e em chat)<br>
+            2. Criar 1 conta admin por dev no Genesis (UI <code>/login → Registrar</code>) e no AI-Teams<br>
+            3. Azure portal: dar acesso via RBAC por usuário (não compartilhar <code>az login</code>)<br>
+            4. MongoDB Atlas + Pinecone: criar usuários por dev no dashboard<br>
+            5. GitHub: adicionar como collaborator nos 4 repos (especialmente <code>cacaviana/ai-teams</code> que é privado pessoal)
           </p>
         </div>
       </div>
