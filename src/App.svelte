@@ -16,14 +16,22 @@
   import { capitulosRAG, recursosExtras } from './lib/rag101';
   import { checklist, contarPorEstado } from './lib/checklist';
 
-  type Tab = 'hoje' | 'agora' | 'pilares' | 'recursos' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag' | 'rag101';
+  type Tab = 'hoje' | 'agora' | 'pilares' | 'recursos' | 'futuro' | 'acao' | 'sb' | 'banco' | 'plano' | 'ferramentas' | 'execucao' | 'checklist' | 'agentes' | 'rag' | 'rag101' | 'ai-overview' | 'ai-rag' | 'ai-agentes' | 'ai-integracao' | 'ai-roadmap';
+  type Page = 'genesis' | 'ai-teams';
 
   let capituloAberto = $state<number | null>(1);
 
   const stats = contarPorEstado();
   const areas = [...new Set(checklist.map(i => i.area))];
 
+  let page = $state<Page>('genesis');
   let tab = $state<Tab>('hoje');
+
+  function switchPage(p: Page) {
+    page = p;
+    // Reset pra tab inicial da nova página
+    tab = p === 'genesis' ? 'hoje' : 'ai-overview';
+  }
   let blocoSelecionado = $state<BlocoType | null>(null);
   let painelAberto = $state(false);
 
@@ -69,11 +77,22 @@
     <div class="brand">
       <div class="brand-dot"></div>
       <div>
-        <h1>Genesis Roadmap</h1>
-        <p class="subtitulo">Da arquitetura atual até o ecossistema multi-canal IT Valley</p>
+        <h1>IT Valley Roadmap</h1>
+        <p class="subtitulo">Genesis CRM + AI-Teams (Neural Architect) — arquitetura completa</p>
       </div>
     </div>
 
+    <!-- Seletor de Página -->
+    <nav class="page-switch">
+      <button class:ativo={page === 'genesis'} onclick={() => switchPage('genesis')}>
+        🧬 Genesis
+      </button>
+      <button class:ativo={page === 'ai-teams'} onclick={() => switchPage('ai-teams')}>
+        🤖 AI-Teams
+      </button>
+    </nav>
+
+    {#if page === 'genesis'}
     <nav class="tabs">
       <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como era hoje</button>
       <button class:ativo={tab === 'agora'} onclick={() => tab = 'agora'}>🆕 Como está agora</button>
@@ -91,6 +110,16 @@
       <button class:ativo={tab === 'rag101'} onclick={() => tab = 'rag101'}>📚 RAG 101 (curso)</button>
       <button class:ativo={tab === 'ferramentas'} onclick={() => tab = 'ferramentas'}>Ferramentas</button>
     </nav>
+    {:else}
+    <!-- Nav AI-Teams (página separada) -->
+    <nav class="tabs">
+      <button class:ativo={tab === 'ai-overview'} onclick={() => tab = 'ai-overview'}>🤖 O que é</button>
+      <button class:ativo={tab === 'ai-rag'} onclick={() => tab = 'ai-rag'}>🧠 RAG em detalhe</button>
+      <button class:ativo={tab === 'ai-agentes'} onclick={() => tab = 'ai-agentes'}>👥 Agentes</button>
+      <button class:ativo={tab === 'ai-integracao'} onclick={() => tab = 'ai-integracao'}>🔌 Genesis ↔ AI-Teams</button>
+      <button class:ativo={tab === 'ai-roadmap'} onclick={() => tab = 'ai-roadmap'}>🚧 Roadmap IA</button>
+    </nav>
+    {/if}
   </div>
 </header>
 
@@ -2198,6 +2227,406 @@ except Exception as e:
       </div>
     </section>
   {/if}
+
+  <!-- ==================== PÁGINA AI-TEAMS ==================== -->
+
+  {#if tab === 'ai-overview'}
+    <section>
+      <h2>🤖 AI-Teams (Neural Architect) — o que é</h2>
+      <p class="bloco-intro">
+        Um sistema de IA conversacional com <strong>orquestrador + agentes especialistas + RAG</strong>.
+        Quando um cliente manda mensagem no WhatsApp da IT Valley, o Genesis chama o AI-Teams,
+        que decide qual especialista responde e usa conteúdo dos cursos como base.
+      </p>
+
+      <div class="grupo">
+        <h4>Anatomia em 1 imagem</h4>
+        <div class="bloco bloco--info" style="cursor: default; font-family: monospace; white-space: pre; overflow-x: auto;">
+          <span class="tag">Fluxo</span>
+{`Pergunta cliente
+       │
+       ▼
+🤖 ORQUESTRADOR (agente_id=14)
+       │
+       │ classifica intenção: vendas? conteúdo? carreira?
+       ▼
+👤 AGENTE ESPECIALISTA (Vendas | Conteúdo | Carreira | Mastertech | ...)
+       │
+       ├──🔎 RAG: query Pinecone com embedding da pergunta
+       │    ↓ top_k=30 chunks dos docs IT Valley
+       │
+       └──🧠 GPT-5 + contexto RAG → resposta natural
+              │
+              ▼
+        Resposta volta pro Genesis
+              │
+              ▼
+        Cliente recebe no WhatsApp`}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Stack tecnológica</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🐍 Backend</span>
+            <h3>FastAPI + Python 3.13</h3>
+            <p class="desc">Endpoint <code>POST /api/chat</code> autenticado via Bearer token (<code>na_test_</code> / <code>na_live_</code>). Agente_id no body decide qual rota interna.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🟫 Banco</span>
+            <h3>MongoDB Atlas</h3>
+            <p class="desc">Coleções: <code>agents</code>, <code>conversations</code>, <code>api_tokens</code>, <code>users</code>. Hoje compartilhado entre PROD/ACCP (DB separação pendente).</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🟨 Vector store</span>
+            <h3>Pinecone</h3>
+            <p class="desc">Index <code>neural-architect</code> · 3072 dim · namespace por tenant. Embeddings da <strong>OpenAI text-embedding-3-large</strong>.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🟥 LLM</span>
+            <h3>GPT-5 (OpenAI)</h3>
+            <p class="desc">Modelo principal pra resposta. Agente orquestrador também usa GPT-5 pra classificar intenção. Anthropic gpt-4o-mini só pra contextual generation no ingest.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">☁️ Hospedagem PROD</span>
+            <h3>Azure App Service</h3>
+            <p class="desc">App: <code>app-ai-teams-backend-prod.azurewebsites.net</code><br>Plan: <code>plan-ai-teams-prod</code> B2 (isolado do Genesis)<br>Region: Canada Central</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🔐 Secrets</span>
+            <h3>Azure Key Vault</h3>
+            <p class="desc">Vault: <code>kv-api-key-itvalley</code><br>Secrets: <code>OPENAI_API_KEY</code>, <code>PINECONE_API_KEY</code>, <code>MONGODB_URL</code>, <code>JWT_SECRET_KEY</code>, <code>ai-teams-api-token-prod</code></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Como entra mensagem</h4>
+        <div class="bloco bloco--ok" style="cursor: default;">
+          <span class="tag">Trigger</span>
+          <h3>Genesis chama via HTTP quando conversa.modo='ia'</h3>
+          <p class="desc">
+            AI-Teams NÃO ouve webhooks da Meta diretamente. É o Genesis que processa inbound
+            WhatsApp, decide (com base em <code>conversa.modo</code>) se vai pra IA, e chama
+            via <code>POST /api/chat</code> com Bearer token. Resposta volta no JSON, Genesis
+            publica no Service Bus pra enviar de volta via WhatsApp.
+          </p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'ai-rag'}
+    <section>
+      <h2>🧠 RAG (Retrieval-Augmented Generation) em detalhe</h2>
+      <p class="bloco-intro">
+        RAG permite o GPT responder usando conteúdo dos cursos IT Valley sem ter sido
+        treinado neles. Dividimos em 2 fluxos: <strong>ingestão</strong> (offline, uma vez por doc)
+        e <strong>query</strong> (online, a cada pergunta).
+      </p>
+
+      <div class="grupo">
+        <h4>📥 Ingestão (offline)</h4>
+        <div class="grid-3">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Fase 1 — Chunker</span>
+            <h3>Markdown-aware semantic</h3>
+            <p class="desc">Python puro (sem LangChain). Quebra por seções H2/H3, preserva tabelas e listas. Chunks de ~500-1000 tokens, overlap 100.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Fase 2 — Embedding</span>
+            <h3>text-embedding-3-large</h3>
+            <p class="desc">OpenAI · 3072 dimensões por chunk · custo ~$0.13/1M tokens. Cada chunk vira 1 vetor no Pinecone.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Fase 3 — Contextual Gen</span>
+            <h3>Anthropic gpt-4o-mini</h3>
+            <p class="desc">Antes do embedding, gpt-4o-mini gera 1 frase de contexto (ex: "Este chunk fala sobre preços do curso XYZ"). Anexa ao chunk → melhora retrieval.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🔎 Query (online — a cada pergunta)</h4>
+        <div class="bloco bloco--info" style="cursor: default; font-family: monospace; white-space: pre; overflow-x: auto;">
+          <span class="tag">Pipeline</span>
+{`❓ Pergunta: "Qual o valor da pós em IA?"
+        │
+        ▼
+🔢 Embedding da pergunta (mesmo modelo: text-embedding-3-large)
+        │
+        ▼
+🔎 Pinecone query
+        │ top_k=30
+        │ filter: namespace=tenant-it-valley
+        │ metric: cosine similarity
+        ▼
+📋 30 chunks ordenados
+        │
+        ▼
+📝 Prompt montado:
+        │   [contexto cliente]
+        │   [30 chunks RAG]
+        │   [sistema_prompt do agente]
+        │   [pergunta original]
+        ▼
+🤖 GPT-5 → resposta natural usando os chunks`}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🚧 Pendente: estado da arte (Nível 4)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">F4 — pending</span>
+            <h3>Re-ranking BGE local</h3>
+            <p class="desc">Pinecone retorna 30 chunks → BGE cross-encoder (local) re-rankeia → top 10. <strong>Melhora precisão</strong>, custo zero, latência +200-500ms.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">F5 — pending</span>
+            <h3>Hybrid Search (vector + BM25)</h3>
+            <p class="desc">Busca semântica (Pinecone) + lexical (BM25) em paralelo. Combina com reciprocal rank fusion. <strong>Pega keywords específicos</strong> (nomes, datas) + semântica.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>📚 Mini-curso RAG 101</h4>
+        <div class="bloco bloco--info" style="cursor: default;">
+          <span class="tag">8 capítulos pra equipe</span>
+          <h3>Ver na página Genesis → aba 📚 RAG 101</h3>
+          <p class="desc">Curso completo de RAG do zero — embedding, vector store, chunking, retrieval, prompt augmentation. Para devs que nunca viu RAG. <a href="#" onclick={(e) => {{ e.preventDefault(); switchPage('genesis'); tab = 'rag101'; }}}>Ir pra RAG 101 →</a></p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'ai-agentes'}
+    <section>
+      <h2>👥 Agentes — o Orquestrador e os Especialistas</h2>
+      <p class="bloco-intro">
+        AI-Teams não é 1 bot único. É um <strong>time</strong> de agentes especializados,
+        coordenados por 1 orquestrador. Cada agente tem prompt próprio, ferramentas próprias,
+        e modelo próprio (geralmente GPT-5).
+      </p>
+
+      <div class="grupo">
+        <h4>O Orquestrador (ID=14)</h4>
+        <div class="bloco bloco--ok" style="cursor: default;">
+          <span class="tag">Agente especial</span>
+          <h3>🤖 Orquestrador IT Valley</h3>
+          <p class="desc">
+            Agente ENTRY POINT. Recebe TODA pergunta do cliente.<br>
+            <strong>Responsabilidade:</strong> classificar intenção e rotear pra o especialista certo.<br>
+            <strong>NÃO responde diretamente</strong> — delega.<br>
+            ID hardcoded no Genesis: <code>AI_TEAMS_DEFAULT_AGENTE_ID=14</code>.<br>
+            <em>Confusão comum: orquestrador NÃO chama outros orquestradores. Roteia pra agentes folha (especialistas).</em>
+          </p>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Agentes Especialistas</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Vendas</span>
+            <h3>💰 Agente Vendas</h3>
+            <p class="desc">Preços, planos, formas de pagamento, matrículas, próximas turmas. Prompt: "Você é da equipe de admissões da IT Valley School".</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Conteúdo</span>
+            <h3>📚 Agente Conteúdo</h3>
+            <p class="desc">Programa do curso, ementas, professores, diferenciais técnicos, certificações. Detalhes pedagógicos.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Carreira</span>
+            <h3>🎯 Agente Carreira</h3>
+            <p class="desc">Perspectivas de carreira, mercado de trabalho, expectativa salarial, transição profissional.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">Outros</span>
+            <h3>🎓 Agentes de curso específico</h3>
+            <p class="desc">Mastertech, Pós-graduação Engenharia de Dados, etc. Cada curso pode ter agente próprio com material específico no RAG.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Como criar/editar agente</h4>
+        <div class="bloco bloco--warn" style="cursor: default;">
+          <span class="tag">Admin UI</span>
+          <h3>app-ai-teams-frontend-accp.azurewebsites.net</h3>
+          <p class="desc">
+            Login admin (Carlos: <code>carlosvianacomp@gmail.com</code> / <code>Itvalley01.</code>).
+            Hoje só ACCP — frontend PROD pendente. Mas dados são compartilhados (Mongo PROD = Mongo ACCP),
+            então criar agente no ACCP reflete no PROD.<br><br>
+            <strong>Pra cada agente:</strong> nome, prompt do sistema, modelo (GPT-5), ferramentas
+            (RAG do Pinecone, etc), e <code>agente_id</code> que aparece nas chamadas.
+          </p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'ai-integracao'}
+    <section>
+      <h2>🔌 Genesis ↔ AI-Teams (como se conectam)</h2>
+      <p class="bloco-intro">
+        Genesis vê AI-Teams como <strong>caixa preta HTTP</strong>. Não sabe que tem
+        orquestrador, RAG, GPT. Só faz uma chamada e recebe a resposta.
+      </p>
+
+      <div class="grupo">
+        <h4>O contrato HTTP</h4>
+        <div class="bloco bloco--info" style="cursor: default; font-family: monospace; white-space: pre; overflow-x: auto;">
+          <span class="tag">Request</span>
+{`POST https://app-ai-teams-backend-prod.azurewebsites.net/api/chat
+Headers:
+  Authorization: Bearer na_test_9zoaC... (do Key Vault)
+  Content-Type: application/json
+
+Body:
+{
+  "agente_id": 14,
+  "mensagem": "qual o valor da pós em IA?",
+  "contexto_cliente": "Nome: Carlos\\nTel: +1581...",
+  "historico": [
+    {"papel": "user", "conteudo": "oi"},
+    {"papel": "assistant", "conteudo": "Olá! Como posso ajudar?"}
+  ]
+}`}
+        </div>
+        <div class="bloco bloco--info" style="cursor: default; font-family: monospace; white-space: pre; overflow-x: auto;">
+          <span class="tag">Response</span>
+{`HTTP 200 OK
+{
+  "resposta": "Oi, Carlos! Bem-vindo à IT Valley...",
+  "agente_final": "agente_vendas",
+  "caminho_execucao": ["Orquestrador IT Valley", "Agente Vendas"],
+  "ferramentas_usadas": ["pinecone_query"],
+  "anexos": []
+}`}
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Quando Genesis chama</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Trigger 1</span>
+            <h3>Operador clica "🤖 Ativar IA" no chat</h3>
+            <p class="desc">Conversa específica vira <code>modo='ia'</code>. Próximas mensagens do cliente nessa conversa vão pra AI-Teams automático.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">Trigger 2</span>
+            <h3>Toggle global em /settings</h3>
+            <p class="desc">Carlos liga "Responder com IA por padrão". NOVAS conversas (cliente que nunca falou) iniciam em modo IA. Conversas antigas mantém estado.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>O que acontece se AI-Teams cair?</h4>
+        <div class="bloco bloco--ok" style="cursor: default;">
+          <span class="tag">Resiliência</span>
+          <h3>Genesis NÃO cai junto</h3>
+          <p class="desc">
+            Desde 27/05 AI-Teams roda em <strong>plan isolado</strong>
+            (<code>plan-ai-teams-prod</code> B2) — diferente do plan do Genesis. Se AI-Teams
+            entrar em crash loop, o Genesis continua funcionando pras meninas mandarem
+            mensagens normais.<br><br>
+            <strong>Comportamento:</strong> se <code>POST /api/chat</code> falhar (timeout 180s,
+            500, conexão recusada), Genesis loga erro e NÃO responde nada pelo WhatsApp.
+            Operador continua podendo responder manual.
+          </p>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'ai-roadmap'}
+    <section>
+      <h2>🚧 Roadmap IA — próximos passos</h2>
+      <p class="bloco-intro">
+        Lista honesta do que falta. Priorizado por impacto (qualidade da resposta vs custo
+        de implementação).
+      </p>
+
+      <div class="grupo">
+        <h4>🔥 Curto prazo — UX da integração no Genesis</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Feito 27/05</span>
+            <h3>Badge "🤖 IA Ativada" + botão "👤 Retomar humano"</h3>
+            <p class="desc">UI agora atualiza imediato. Sem F5. Estado claro pro operador.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">⏳ Bug 5</span>
+            <h3>"Janela 24h" aparece sem motivo</h3>
+            <p class="desc">UI bloqueia input mesmo com janela aberta. Investigar timezone ou cálculo <code>janelaAberta</code> no ConversaDTO.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">⏳ Bug 9</span>
+            <h3>Quick reply do template não aparece no histórico</h3>
+            <p class="desc">Quando cliente clica botão de template, Genesis não mostra o que ele clicou. <code>webhook_whatsapp_factory.py</code> já parseia, mas talvez chega sem texto.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>⚡ Médio prazo — performance + qualidade RAG</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">F4 — 2-3h</span>
+            <h3>Re-ranking BGE local</h3>
+            <p class="desc">Reduz top_K de 30 → 10 melhores. GPT-5 fica mais rápido (~30s → ~15s) e mais preciso. Custo zero.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">F5 — 2-3h</span>
+            <h3>Hybrid Search (vector + BM25)</h3>
+            <p class="desc">Combina semântica + keyword. Pega bem nomes próprios, datas, números específicos que embedding às vezes erra.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Otimização</span>
+            <h3>Cache de respostas comuns</h3>
+            <p class="desc">"oi", "ola", "bom dia" → resposta cacheada. Não gasta GPT, não demora 30s.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Otimização</span>
+            <h3>Streaming response</h3>
+            <p class="desc">Cliente vê palavras chegando antes de terminar geração. Melhora percepção (UX) mesmo sem reduzir tempo total.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>🏗️ Longo prazo — arquitetura</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Limpeza</span>
+            <h3>Database MongoDB AI-Teams PROD separado do ACCP</h3>
+            <p class="desc">Hoje PROD usa mesmo Mongo do ACCP. Funciona, mas é gambiarra. Criar <code>ai_teams_prod</code> database separado no mesmo cluster Atlas.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Escala</span>
+            <h3>RAG via Service Bus + worker dedicado</h3>
+            <p class="desc">Query RAG roda no mesmo processo que serve HTTP — pode saturar. Mover query RAG pra worker async via SB pra escalar paralelo.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Watchdog</span>
+            <h3>Timeout AI-Teams → marca "falha"</h3>
+            <p class="desc">Se AI-Teams demorar &gt;3min sem responder, Genesis marca mensagem como "falha_ia" e notifica operador. Hoje espera indefinido.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">Frontend PROD</span>
+            <h3>app-ai-teams-frontend-prod</h3>
+            <p class="desc">Criar frontend PROD próprio. Hoje admin acessa via frontend-accp (mesma DB mas URL ACCP).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
 </main>
 
 <footer class="rodape container">
@@ -2243,6 +2672,32 @@ except Exception as e:
     color: var(--text-secondary);
     font-size: 14px;
     margin-top: 4px;
+  }
+
+  .page-switch {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .page-switch button {
+    padding: 10px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--t);
+  }
+  .page-switch button:hover { color: var(--text-primary); background: rgba(168, 85, 247, 0.08); }
+  .page-switch button.ativo {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
   }
 
   .tabs {
