@@ -77,6 +77,7 @@
     <nav class="tabs">
       <button class:ativo={tab === 'hoje'} onclick={() => tab = 'hoje'}>Como era hoje</button>
       <button class:ativo={tab === 'agora'} onclick={() => tab = 'agora'}>🆕 Como está agora</button>
+      <button class:ativo={tab === 'pilares'} onclick={() => tab = 'pilares'}>🛡️ Pilares</button>
       <button class:ativo={tab === 'futuro'} onclick={() => tab = 'futuro'}>Como deve ficar</button>
       <button class:ativo={tab === 'acao'} onclick={() => tab = 'acao'}>Ação: enviar mensagem</button>
       <button class:ativo={tab === 'sb'} onclick={() => tab = 'sb'}>Service Bus 101</button>
@@ -1876,6 +1877,120 @@ except Exception as e:
           {#each ferramentas.filter(f => ['meta-tool','twilio','ig'].includes(f.id)) as f}
             <Bloco bloco={f} onclick={abrirPainel} />
           {/each}
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if tab === 'pilares'}
+    <section>
+      <h2>🛡️ Pilares Arquiteturais — 2026-05-26</h2>
+      <p class="bloco-intro">
+        Depois de um incidente PROD onde a UI dizia <strong>"Enviado"</strong> mas o cliente <strong>não recebia</strong>, mudamos a postura: arquiteto vê o sistema inteiro, não só o sintoma. Esses são os 6 pilares que separam "sistema que funciona com sorte" de "sistema confiável".
+      </p>
+
+      <div class="grupo">
+        <h4>Os 6 Pilares</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Pilar 1 · DONE</span>
+            <h3>Observabilidade</h3>
+            <p class="desc">Application Insights <code>appi-genesis</code> + OpenTelemetry SDK em todos os entry points (backend, workers). Auto-instrumentação: requests, dependencies, SB, SQL, exceptions. Spans manuais pra publish/consume. <strong>Sem isso, não teríamos descoberto o "body Field required" da Polly.</strong></p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Pilar 2 · DONE</span>
+            <h3>Contract Tests Genesis↔Polly</h3>
+            <p class="desc">15 testes em <code>tests/contract/</code> copiam o <code>SendMessageRequest</code> da Polly. Bloqueia drift de DTO. GitHub Actions <code>contract-drift-check.yml</code> roda em PR + diário. Se a Polly mudar contrato, o build quebra antes do deploy.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">✅ Pilar 3 · DONE backend</span>
+            <h3>Verdade nos Status</h3>
+            <p class="desc">Status flow: <code>enviando → enviada → entregue → lida</code> ou <code>falha</code>. Coluna <code>erro_motivo</code> (500 chars) + <code>idempotency_key</code> (correlação dupla com Polly: por wamid OU idempotency_key). UI ainda mostra só "Enviado/Falha" — frontend pra mostrar <code>erro_motivo</code> é Pilar 3 parte 2.</p>
+          </div>
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">⏳ Pilar 4 · PARCIAL</span>
+            <h3>Deploy Resiliência</h3>
+            <p class="desc">Parte 1 DONE: <code>concurrency.group</code> por app-name em 3 workflows PROD (protege 409 Conflict). Falta: workflows accp, custom Docker image (escapar do antenv quebrando com base image Azure), deployment slots zero-downtime.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">⏳ Pilar 5 · PENDING</span>
+            <h3>Smoke E2E Automatizado</h3>
+            <p class="desc">Logic App hourly que dispara template real pro Carlos+Laura, valida wamid retornado, alerta se quebrar. Hoje só tem smoke manual. ~2h pra implementar.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">⏳ Pilar 6 · PENDING (depende Polly)</span>
+            <h3>PR no repo messaging-service</h3>
+            <p class="desc">Worker da Polly publicar <code>message.failed</code> em <code>messaging.status</code> quando ValidationError. Hoje em validation error: <code>complete_message</code> silencioso = mensagem perde, status_updater do Genesis nunca atualiza, UI fica "enviando" eterno. Precisa abrir PR em ITValley-School/messaging-service.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Bugs arquitetônicos descobertos hoje (e como resolvemos)</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--ok" style="cursor: default;">
+            <span class="tag">🐛 → ✅ RESOLVIDO</span>
+            <h3>Service Bus compartilhado PROD↔ACCP</h3>
+            <p class="desc">Namespace <code>genesisitvalley</code> era usado pelos apps PROD <strong>e</strong> ACCP. <code>app-genesis-backend-accp</code> (código velho) consumia fila <code>genesis-campanhas</code> de PROD e publicava em <code>messaging.send</code> SEM o campo <code>body</code>. Polly rejeitava. Carlos batia: "não recebi". Fix: criado namespace <code>genesisitvalley-accp</code> (Standard, eastus) + replicadas 5 queues + 3 topics + 4 subscriptions + apontados apps ACCP pro novo. Sangria estancada.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🐛 WORKAROUND ATIVO</span>
+            <h3>Worker standalone morre por warmup probe</h3>
+            <p class="desc">Apps <code>worker-genesis-campanhas</code> e <code>worker-genesis-webhooks</code> rodam <code>python main_worker_X.py</code> (loop puro, sem FastAPI). Azure App Service espera resposta HTTP em :8000 — warmup probe falha após 600s → container terminated. Workaround: <code>CAMPANHA_WORKER_SEPARADO=false</code> no backend principal pra rodar todos os loops via lifespan (backend é FastAPI nativo, probe passa). Fix correto: cada worker expor <code>/health</code> HTTP simples paralelo ao loop.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🐛 EM ABERTO</span>
+            <h3>Polly faz drop silencioso em ValidationError</h3>
+            <p class="desc"><code>send_worker._handle_message()</code> chama <code>receiver.complete_message(msg)</code> mesmo quando o DTO falha. Sem publicar <code>message.failed</code>, o Genesis não tem como saber. Pilar 3 (verdade) fica mancando porque a Polly some com a mensagem. <strong>Sintoma:</strong> UI mostra "Enviado" e celular não toca, porque <code>messaging-service</code> "comeu" a msg. Fix em <code>workers/send_worker.py</code>: emit <code>self._publicar_evento</code> com event=message.failed antes do complete.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🐛 KNOWN · BR-only</span>
+            <h3>normalizar_telefone rejeita internacionais</h3>
+            <p class="desc"><code>normalizar_telefone("15815780564")</code> sem <code>+</code> retornava <code>""</code> pra Carlos (Canadá +1). Fix em <code>campanha_service.disparar</code>: usar <code>ContatoModel.telefone_e164</code> direto do banco, fallback pra <code>normalizar_telefone</code> só se vazio. UI precisa exigir E.164 com <code>+</code> obrigatório no input.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">💡 GAP ARQUITETURAL</span>
+            <h3>Sem watchdog pra "enviando" eterno</h3>
+            <p class="desc">Mensagem com <code>status="enviando"</code> há mais de N min sem evento <code>message.sent</code> da Polly deveria virar <code>falha</code> com <code>erro_motivo="timeout_polly"</code> automaticamente + alerta. Hoje fica eternamente. Job periódico (a cada 5min): UPDATE mensagens SET status='falha', erro_motivo='timeout_polly' WHERE status='enviando' AND created_at &lt; NOW() - INTERVAL '10 min'.</p>
+          </div>
+          <div class="bloco bloco--ghost" style="cursor: default;">
+            <span class="tag">💡 GAP ARQUITETURAL</span>
+            <h3>UI não exibe erro_motivo</h3>
+            <p class="desc"><code>MensagemDTO</code> do frontend tem <code>erroMotivo</code> e <code>statusLabel</code> com tooltip ("Falha: número inválido"), mas as views de campanha mostram só "Enviado"/"Falha" sem motivo. Operador vê falha mas não sabe POR QUÊ. Falta: render do <code>statusLabel</code> + ícone diferenciado em <code>campaigns/[id]/+page.svelte</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Smoke E2E real — 26/05 19:31 UTC</h4>
+        <div class="bloco bloco--ok" style="cursor: default;">
+          <span class="tag">✅ FUNCIONOU PONTA A PONTA</span>
+          <h3>Campanha <code>d658b833</code> · 2 destinatários · 2 entregues</h3>
+          <p class="desc">
+            <strong>19:18:32</strong> Carlos clica "Disparar" no frontend (genesisbackendd recebe 202).<br>
+            <strong>19:18:33</strong> Backend enfileira em <code>genesis-campanhas</code>.<br>
+            <strong>~19:31</strong> Backend (lifespan worker, pós-fix <code>CAMPANHA_WORKER_SEPARADO=false</code>) consome, chama <code>publicar_mensagem_outbound</code> com <code>body=[template:teste1001]</code>.<br>
+            <strong>19:31:56</strong> Polly <code>send_worker_done id=7f052d2b status=sent wamid=...393</code> → <strong>Laura</strong> recebeu (<code>+5517992379339</code>).<br>
+            <strong>19:32:00</strong> Polly <code>send_worker_done id=7d69be68 status=sent wamid=HBgLMTU4MTU3ODA1NjQ...</code> → <strong>Carlos</strong> recebeu (<code>+15815780564</code>).<br>
+            <strong>19:32:01-03</strong> Eventos <code>message.delivered</code> publicados em <code>messaging.status</code>.<br>
+            Carlos confirmou no celular: "chegou no meu celular". <strong>Pilar 3 verde end-to-end pelo caminho feliz.</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h4>Postura: arquiteto, não dev tático</h4>
+        <div class="bloco bloco--info" style="cursor: default;">
+          <span class="tag">📜 Princípio</span>
+          <h3>Antes de mexer em código, expor riscos sistêmicos</h3>
+          <p class="desc">
+            Frases-gatilho da sessão de hoje:<br>
+            • <em>"tu ta agindo como arquiteto?"</em> → reavaliar postura, expor riscos.<br>
+            • <em>"100% correto"</em> → não cantar vitória sem evidência REAL (msg chegou no celular, não "Genesis diz que enviou").<br>
+            • <em>"observabilidade"</em> → o sintoma de estar debugando no escuro.<br>
+            • <em>"minha equipe vai usar"</em> → solução tem que ser robusta, não MVP.<br>
+            • <em>"deveria ter prefixo prod, ne?"</em> → Carlos chegou na causa raiz antes do Claude.
+          </p>
         </div>
       </div>
     </section>
