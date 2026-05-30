@@ -193,8 +193,44 @@
     <section>
       <h2>🆕 Como está AGORA — Fase 3 ATIVA em PROD oficial</h2>
       <p class="bloco-intro">
-        Estado FINAL de <strong>2026-05-23 02:35 UTC</strong>. Genesis ↔ Meta DESACOPLADO. App oficial <code>messaging-service-itvalley-prod</code> rodando código da Polly evoluído por Carlos + Claude. Webhook Meta apontando direto pro app oficial. Sandbox deletado. <strong>Clique em qualquer bloco pra detalhes.</strong>
+        Estado de <strong>2026-05-30</strong>. Genesis ↔ Meta DESACOPLADO desde 2026-05-23. App oficial <code>messaging-service-itvalley-prod</code> rodando. Webhook Meta apontando direto pro app oficial. <strong>Clique em qualquer bloco pra detalhes.</strong>
       </p>
+
+      <div class="grupo">
+        <h4>📌 Atualização 2026-05-30</h4>
+        <div class="grid-2">
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🛡️ 4 Pilares completos</span>
+            <h3>Observabilidade + Contract + Status + Slots</h3>
+            <p class="desc">Pilar 1 (App Insights) + Pilar 2 (contract tests) + Pilar 3 (status verdadeiro: enviada→entregue→lida) + Pilar 4 (deployment slots zero-downtime).</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🤖 AI-Teams integrado</span>
+            <h3>Conversas em modo IA respondem sozinhas</h3>
+            <p class="desc">Toggle "IA por padrão" em /settings. Botão "Ativar IA / Retomar humano" em cada conversa. Orquestrador delega pra Vendas/Conteúdo/Carreira via RAG.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">🤝 Polly saiu</span>
+            <h3>messaging-service agora é nosso</h3>
+            <p class="desc">Polly não trabalha mais com a gente. Manutenção do messaging-service-itvalley-prod (gateway Meta/Twilio/ACS) passa a ser Carlos + Claude. Fixes diretos no repo ITValley-School/messaging-service.</p>
+          </div>
+          <div class="bloco bloco--warn" style="cursor: default;">
+            <span class="tag">🐛 Bug button conhecido</span>
+            <h3>Clique no quick reply vira "[button]"</h3>
+            <p class="desc">Fix correto: messaging-service webhooks_meta.py:_extrair_content não extrai label do button/interactive. Em correção 2026-05-30.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">⚡ Frontend sem cold start</span>
+            <h3>genesisfrontend movido pra plan-genesis-backend</h3>
+            <p class="desc">Antes: F1 Free (dormia 20min). Agora: P1v3 com alwaysOn=true. Latência 150ms estável.</p>
+          </div>
+          <div class="bloco bloco--info" style="cursor: default;">
+            <span class="tag">💰 Pendência</span>
+            <h3>Consolidar plans Azure ($413/mês)</h3>
+            <p class="desc">10 plans Azure, ideal era 7 (Itvalley/Phoenixx/Petra × PROD/NoPROD + Free). plan-genesis-backend (P1v3 $146) é 35% da conta. Avaliar B3 + unificação.</p>
+          </div>
+        </div>
+      </div>
 
       <div class="grupo">
         <h4>Caminho de saída (campanha → messaging-service → Meta) — ATIVO</h4>
